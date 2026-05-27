@@ -20,8 +20,8 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+        max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 2500),
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -37,6 +37,7 @@ export default async function handler(req, res) {
     const text = data?.content?.map(block => block.text || '').join('\n') || '';
     return res.status(200).json({ text });
   } catch (err) {
+    console.error('SERVER_ERROR:', err);
     return res.status(500).json({ error: err.message || '서버 오류' });
   }
 }
