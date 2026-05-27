@@ -52,7 +52,7 @@ export default async function handler(req, res) {
       }
     };
 
-    const compactPrompt = `${prompt}\n\n[서버 안정화용 추가 지시]\n- 반드시 submit_exam 도구만 사용하세요. 일반 텍스트 출력 금지.\n- 전체 8문항 기준이면 지문 묶음은 최대 3개만 사용하세요.\n- 각 passage는 설명문 70~95단어, 대화문 8~10줄 이내로 짧게 작성하세요.\n- 후속 연계 문항은 passage를 빈 문자열로 두고, stem은 발문만 작성하세요.\n- 어법 문항에서도 지문 전체를 stem에 다시 붙여넣지 마세요.\n- choices는 객관식 5개, 각 선택지는 18단어 이내로 작성하세요.\n- explanation은 1문장만 작성하세요.\n- 서술형이 0문항이면 서술형을 절대 생성하지 마세요.`;
+    const compactPrompt = `${prompt}\n\n[서버 안정화용 추가 지시]\n- 반드시 submit_exam 도구만 사용하세요. 일반 텍스트 출력 금지.\n- 전체 8문항 기준이면 지문 묶음은 최대 3개만 사용하세요.\n- 각 passage는 설명문 70~95단어, 대화문 8~10줄 이내로 짧게 작성하세요.\n- 후속 연계 문항은 passage를 빈 문자열로 두고, stem은 발문만 작성하세요.\n- 어법 문항에서도 지문 전체를 stem에 다시 붙여넣지 마세요.\n- choices는 객관식 5개, 각 선택지는 18단어 이내로 작성하세요.\n- 정답만 너무 명확하게 보이지 않도록, 같은 품사·비슷한 길이의 그럴듯한 오답을 최소 2개 포함하세요.\n- 내용일치/불일치는 대상·범위·원인·결과 중 하나만 바꾼 함정 선택지를 최소 2개 포함하세요.\n- 제목/요지 문제는 너무 넓은 제목, 너무 좁은 제목, 소재는 맞지만 결론이 다른 제목을 섞으세요.\n- 어법 문항은 앞 지문 문장을 활용해 한두 표현만 변형하고, 독립 예문식 문법 문제로 만들지 마세요.\n- explanation은 1문장만 작성하세요.\n- 서술형이 0문항이면 서술형을 절대 생성하지 마세요.`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 55000);
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
           max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 3200),
-          temperature: 0.35,
+          temperature: 0.38,
           tools: [toolSchema],
           tool_choice: { type: 'tool', name: 'submit_exam' },
           messages: [{ role: 'user', content: compactPrompt }]
