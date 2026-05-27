@@ -662,7 +662,7 @@ const REF_CELLS = [
   {key:'2023_2', label:'2023\n2학기', year:'2023', sem:'2'},
 ];
 
-let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:20,obj:18,sub:2};
+let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:8,obj:7,sub:1};
 let examProfiles={};
 let selectedRefs=new Set(); // 선택된 기출 키
 let questions=[],passages=[],typeConfig={},ansVisible=false,ratioValues={};
@@ -1042,7 +1042,10 @@ async function generate(){
       })
     });
     const data=await res.json().catch(()=>({}));
-    if(!res.ok) throw new Error(data.error||'서버 API 오류');
+    if(!res.ok){
+      console.error('SERVER API ERROR:', data);
+      throw new Error(data.error || JSON.stringify(data) || '서버 API 오류');
+    }
     const text=data.text||'';
     const m=text.match(/\[[\s\S]*\]/);
     if(!m)throw new Error('응답 형식 오류. 다시 시도해주세요.');

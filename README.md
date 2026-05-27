@@ -81,3 +81,11 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 - `exam-profiles.json`에 들어간 샘플 데이터는 실제 기출 분석값이 아니라 구조 예시입니다. 실제 PDF 분석 결과로 교체해야 합니다.
 - GitHub Pages만으로는 `/api/generate-exam`이 동작하지 않습니다. Vercel, Netlify Functions, Cloudflare Workers 중 하나가 필요합니다.
+
+
+## 2026-05-27 Timeout Fix 버전
+
+- Vercel 60초 타임아웃 방지를 위해 Claude `max_tokens` 기본값을 2500으로 낮췄습니다.
+- 초기 테스트 문항 수를 총 8문항(객관식 7, 서술형 1)으로 낮췄습니다.
+- 서버/API 오류가 났을 때 브라우저 콘솔과 Vercel 로그에서 원인을 더 쉽게 확인할 수 있도록 오류 로그를 보강했습니다.
+- 더 많은 문항을 생성하려면 먼저 8문항 생성이 정상 작동하는지 확인한 뒤, 화면에서 문항 수를 조금씩 늘려 테스트하세요.
