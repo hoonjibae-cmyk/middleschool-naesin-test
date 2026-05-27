@@ -421,9 +421,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   <div class="sb-sec">
     <div class="sb-title">문항 수</div>
     <div class="qcount-grid">
-      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><span class="qc-val" id="q-total">20</span><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
-      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><span class="qc-val" id="q-obj">18</span><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
-      <div class="qcount-item"><label>서술형</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('sub',-1)">−</button><span class="qc-val" id="q-sub">2</span><button class="qc-btn" onclick="chQ('sub',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><span class="qc-val" id="q-total">8</span><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><span class="qc-val" id="q-obj">8</span><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>서술형</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('sub',-1)">−</button><span class="qc-val" id="q-sub">0</span><button class="qc-btn" onclick="chQ('sub',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
       <div class="qcount-item" style="grid-column:1/-1;">
         <div class="type-detail-btn" onclick="toggleTypeDetail()">▸ 유형별 문항 수 세부 설정</div>
         <div class="type-detail-box" id="type-detail-box"><div id="type-rows"></div></div>
@@ -662,7 +662,7 @@ const REF_CELLS = [
   {key:'2023_2', label:'2023\n2학기', year:'2023', sem:'2'},
 ];
 
-let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:6,obj:5,sub:1};
+let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:8,obj:8,sub:0};
 let examProfiles={};
 let selectedRefs=new Set(); // 선택된 기출 키
 let questions=[],passages=[],typeConfig={},ansVisible=false,ratioValues={};
@@ -720,8 +720,9 @@ function summarizeProfilesForPrompt(profiles){
     return `【기출 프로필 ${i+1}】 ${p.school||''} ${p.grade||''}학년 ${p.exam_label||p.exam||''}
 - 총 문항/객관식/서술형: ${f.total_questions??'미상'} / ${f.objective_questions??'미상'} / ${f.subjective_questions??'미상'}
 - 주요 유형: ${types}
+- 권장 축소 테스트 문항: ${g.recommended_default_total??'미상'}문항 / 객관식 비율 ${g.recommended_objective_ratio??'미상'} / 서술형 비율 ${g.recommended_subjective_ratio??'미상'}
 - 지문 배치: ${layout.passage_first===false?'문항별 후배치':'지문 선배치/문항 연계'}
-- 서술형 답란: ${layout.answer_space_for_subjective===false?'별도 답란 약함':'별도 답란 필요'}
+- 서술형 답란: ${layout.answer_space_for_subjective===false?'원칙적으로 생성하지 않음':'별도 답란 필요'}
 - 실제 시험 방향:
 ${list(a.core_direction || f.style_notes,'특이사항 없음')}
 - 학생들이 지문에서 중점적으로 공부해야 할 부분:
@@ -734,8 +735,16 @@ ${list(a.grammar_vocab_focus,'자료 없음')}
 ${list(a.question_type_analysis,'자료 없음')}
 - 오답 함정/변별 포인트:
 ${list(a.trap_patterns,'자료 없음')}
+- 반드시 포함할 고우선 유형:
+${list(g.high_priority_types,'자료 없음')}
+- 8문항 축소 테스트 권장 구성:
+${list(g.forced_mini_test_composition,'자료 없음')}
+- 출력 품질 규칙:
+${list(g.output_quality_rules,'자료 없음')}
 - 모의고사 생성 시 반드시 반영할 규칙:
-${list(g.generation_rules || g.high_priority_types,'자료 없음')}
+${list(g.generation_rules,'자료 없음')}
+- 생성 금지/주의:
+${list(g.avoid,'자료 없음')}
 - 기본 스타일 메모:
 ${style}`;
   }).join('\n\n');
@@ -810,6 +819,7 @@ function toggleRef(cell, key, avail){
     const k=el.dataset.key;
     if(k) el.classList.toggle('active', selectedRefs.has(k));
   });
+  applyProfileDefaultsFromSelection();
 }
 
 // ── 교과서 패널 ───────────────────────────────────
@@ -870,18 +880,52 @@ function updateRatioTotal(){
   el.className='ratio-total '+(t===100?'ok':'ng');
 }
 
+
+function syncQDisplay(){
+  state.obj=Math.max(0,Math.min(state.total,state.obj));
+  state.sub=Math.max(0,Math.min(state.total,state.sub));
+  if(state.obj+state.sub!==state.total){
+    if(state.sub===0) state.obj=state.total;
+    else state.obj=Math.max(0,state.total-state.sub);
+  }
+  ['total','obj','sub'].forEach(k=>{
+    const el=document.getElementById('q-'+k);
+    if(el)el.textContent=state[k];
+  });
+}
+function applyProfileDefaultsFromSelection(){
+  const profiles=getProfilesForCurrentSelection();
+  if(!profiles.length){syncQDisplay();return;}
+  const primary=profiles[0]||{};
+  const g=primary.generation_guidance||{};
+  const f=primary.format_profile||{};
+  if(g.recommended_default_total){
+    state.total=Math.max(5,Math.min(15,parseInt(g.recommended_default_total)||state.total));
+  }
+  const subjRatio=(typeof g.recommended_subjective_ratio==='number')?g.recommended_subjective_ratio:null;
+  const objRatio=(typeof g.recommended_objective_ratio==='number')?g.recommended_objective_ratio:null;
+  if(subjRatio===0 || f.subjective_questions===0){
+    state.sub=0;
+    state.obj=state.total;
+  }else if(objRatio!==null){
+    state.obj=Math.round(state.total*objRatio);
+    state.sub=state.total-state.obj;
+  }
+  syncQDisplay();
+}
+
 // ── 선택 함수 ─────────────────────────────────────
 function selectSchool(el){
   if(el.classList.contains('disabled'))return;
   document.querySelectorAll('.school-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');state.school=el.dataset.school;
-  renderRefGrid();renderTbPanel();renderTypeRows();
+  renderRefGrid();renderTbPanel();renderTypeRows();syncQDisplay();
 }
 function selectGrade(el){
   if(el.classList.contains('disabled'))return;
   document.querySelectorAll('.grade-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');state.grade=parseInt(el.dataset.grade);
-  renderRefGrid();renderTbPanel();
+  renderRefGrid();renderTbPanel();syncQDisplay();
 }
 function selectDiff(el){
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
@@ -905,10 +949,19 @@ function updateMixTotal(){
   w.textContent='합계: '+t+'%';w.className='mix-total '+(t===100?'ok':'ng');
 }
 function chQ(t,d){
-  if(t==='total')state.total=Math.max(5,Math.min(40,state.total+d));
-  if(t==='obj')state.obj=Math.max(0,Math.min(state.total,state.obj+d));
-  if(t==='sub')state.sub=Math.max(0,Math.min(state.total,state.sub+d));
-  ['total','obj','sub'].forEach(k=>document.getElementById('q-'+k).textContent=state[k]);
+  if(t==='total'){
+    state.total=Math.max(5,Math.min(40,state.total+d));
+    if(state.sub===0)state.obj=state.total;
+  }
+  if(t==='obj'){
+    state.obj=Math.max(0,Math.min(state.total,state.obj+d));
+    state.sub=Math.max(0,state.total-state.obj);
+  }
+  if(t==='sub'){
+    state.sub=Math.max(0,Math.min(state.total,state.sub+d));
+    state.obj=Math.max(0,state.total-state.sub);
+  }
+  syncQDisplay();
 }
 function toggleTypeDetail(){document.getElementById('type-detail-box').classList.toggle('on');}
 function renderTypeRows(){
@@ -1011,9 +1064,13 @@ function buildPrompt(){
 [저장된 학교별 기출 분석 JSON 프로필]
 ${profileSummary}
 
-[중요 지시]
-- 위 JSON 프로필은 실제 기출 PDF를 분석해 저장해둔 학교별 출제 성향입니다.
-- 단순히 학교명을 언급하지 말고, 문항 수·객관식/서술형 비율·주요 유형·발문 스타일·서술형 요구 방식이 자연스럽게 반영되도록 출제하세요.
+[중요 지시 — 실제 내신 스타일 우선]
+- 위 JSON 프로필은 실제 기출 PDF를 분석해 저장해둔 학교별 출제 성향입니다. 겉형식보다 '어떤 지문 포인트를 어떻게 묻는가'를 우선 반영하세요.
+- 단순히 학교명을 언급하지 말고, 지문 속 핵심문장·정의·예시·이유·결과·상징 의미·지칭어·연결어·문법 포인트를 실제 문항으로 바꾸세요.
+- 내용일치/불일치 문항은 선택지 하나를 노골적으로 틀리게 만들지 말고, 지문의 숫자·대상·장소·순서·원인·결과·상징 의미 중 하나를 살짝 바꾼 함정형으로 만드세요.
+- 어법·어휘 문항은 문법 단원명을 묻지 말고, 지문 속 밑줄 표현을 기준으로 품사·시제·접속사/전치사·가정법·as 용법·형용사/부사·동명사/부정사를 판단하게 만드세요.
+- 같은 지문을 여러 문항에 활용할 수 있습니다. 단, 같은 passage를 반복해서 길게 출력하지 마세요. 첫 문항에만 passage를 넣고, 바로 이어지는 후속 문항은 passage를 빈 문자열로 두어 같은 지문 연계 문항처럼 보이게 하세요.
+- 선택된 기출 프로필에서 서술형이 0문항이면, 사용자가 서술형을 명시적으로 요청하지 않는 한 서술형을 만들지 마세요. 서술형 답란만 비워두는 출력은 금지입니다.
 - 선택된 JSON 프로필이 여러 개면 공통적으로 반복되는 특징을 우선 반영하고, 특정 연도만의 특이한 스타일은 과도하게 복제하지 마세요.
 - 신생학교의 경우 인근 학교 프로필을 섞되, 특정 학교 하나에 지나치게 쏠리지 않게 하세요.
 
@@ -1027,12 +1084,16 @@ ${ratioLines}
 - 총 문항: ${state.total}문항 (객관식 ${state.obj}, 서술형 ${state.sub})
 - 난이도: ${diffDesc}
 - 유형 배분: ${typeDesc}
-- 중학교 내신 특성에 맞게 출제 (교과서 본문 중심, 어법·어휘·독해 균형)
+- 중학교 내신 특성에 맞게 출제하되, ${sd.short} 기출 프로필의 고우선 유형을 먼저 채우세요.
+- 가능한 경우 1개 지문에서 2문항 이상을 연계하세요. 예: 내용 불일치 + 제목/요지, 빈칸 + 어법, 어휘 + 내용일치.
+- ${state.sub===0?'이번 요청은 서술형 0문항입니다. 서술형 문제와 서술형 답란을 절대 만들지 마세요.':'서술형은 반드시 구체적인 조건과 모범답안을 포함하세요. 빈 답란만 생성하지 마세요.'}
+- 객관식은 5지선다로 만들고, 쉬운 단순 해석 문제보다 근거 확인이 필요한 선택지로 구성하세요.
 ${custom?'- 추가 요청: '+custom:''}${passageNote}
 
 [출력 형식 — 서버 구조화 출력용 지시]
-[{"number":1,"type":"어법·어휘","subtype":"세부유형","format":"객관식","difficulty":"보통","passage":"지문","stem":"발문","choices":["① ...","② ...","③ ...","④ ...","⑤ ..."],"answer":3,"explanation":"해설 2-3문장"}]
-서술형: choices:[], answer:"모범답안: ..."`;
+[{"number":1,"type":"어법·어휘","subtype":"세부유형","format":"객관식","difficulty":"보통","passage":"첫 연계 문항에만 지문 입력","stem":"발문","choices":["① ...","② ...","③ ...","④ ...","⑤ ..."],"answer":3,"explanation":"정답 근거와 오답 함정을 2문장으로 설명"}]
+- 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.
+- 서술형이 필요한 경우에만 choices:[], answer:"모범답안: ..." 형식을 사용하세요.`;
 }
 
 // ── API 호출 ──────────────────────────────────────
@@ -1079,6 +1140,10 @@ async function generate(){
     if(!Array.isArray(questions)||questions.length===0){
       throw new Error('생성된 문항이 없습니다. 다시 시도해주세요.');
     }
+    if(state.sub===0){
+      questions=questions.filter(q=>q.format!=='서술형');
+    }
+    questions=questions.slice(0,state.total).map((q,i)=>({...q,number:i+1}));
     renderSheet();renderAnswers();
   }catch(e){showErr('오류: '+e.message);document.getElementById('empty-state').style.display='flex';}
   finally{setLoading(false);}
@@ -1097,6 +1162,7 @@ function renderSheet(){
   if(teacher){tf.style.display='';tl.textContent=teacher;}else{tf.style.display='none';}
   const col=document.getElementById('q-columns');
   col.innerHTML='';
+  let lastPassageNorm='';
   questions.forEach((q)=>{
     const isSubj=q.format==='서술형';
     const el=document.createElement('div');
@@ -1104,6 +1170,9 @@ function renderSheet(){
     const typeLabel=q.type+(isSubj?' · 서술형':'');
     const ptsLabel=q.points?`[${q.points}점]`:'';
     const diffLabel=q.difficulty?` ${q.difficulty}`:'';
+    const passageNorm=(q.passage||'').replace(/\s+/g,' ').trim();
+    const showPassage=!!passageNorm && passageNorm!==lastPassageNorm;
+    if(passageNorm)lastPassageNorm=passageNorm;
     const choicesHtml=isSubj
       ?`<div class="subj-ans"><span class="subj-ans-label">답:</span></div>`
       :(q.choices||[]).map((c,ci)=>{
@@ -1115,7 +1184,7 @@ function renderSheet(){
         <span class="q-num${isSubj?' q-num-subj':''}">${q.number}</span>
         <span class="q-stem-text">${q.stem}<sup class="q-meta${isSubj?' q-meta-subj':''}">${typeLabel}${diffLabel} ${ptsLabel}</sup></span>
       </div>
-      ${q.passage?`<div class="q-passage">${q.passage.replace(/\n/g,'<br>')}</div>`:''}
+      ${showPassage?`<div class="q-passage">${q.passage.replace(/\n/g,'<br>')}</div>`:''}
       <div class="q-choices">${choicesHtml}</div>`;
     col.appendChild(el);
   });
