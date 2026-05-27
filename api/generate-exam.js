@@ -22,9 +22,10 @@ export default async function handler(req, res) {
           questions: {
             type: 'array',
             minItems: 1,
+            maxItems: 12,
             items: {
               type: 'object',
-              additionalProperties: true,
+              additionalProperties: false,
               properties: {
                 number: { type: 'integer' },
                 type: { type: 'string' },
@@ -34,11 +35,16 @@ export default async function handler(req, res) {
                 passage: { type: 'string' },
                 stem: { type: 'string' },
                 choices: { type: 'array', items: { type: 'string' } },
-                answer: {},
+                answer: {
+                  anyOf: [
+                    { type: 'integer' },
+                    { type: 'string' }
+                  ]
+                },
                 explanation: { type: 'string' },
                 points: { type: 'integer' }
               },
-              required: ['number', 'type', 'format', 'difficulty', 'stem', 'choices', 'answer', 'explanation']
+              required: ['number', 'type', 'format', 'difficulty', 'passage', 'stem', 'choices', 'answer', 'explanation', 'points']
             }
           }
         },
@@ -46,28 +52,48 @@ export default async function handler(req, res) {
       }
     };
 
-    const compactPrompt = `${prompt}\n\n[매우 중요]\n- 반드시 submit_exam 도구를 사용해 문항을 제출하세요.\n- 일반 텍스트나 코드블록으로 JSON을 쓰지 마세요.\n- passage, stem, choices, explanation은 너무 길게 쓰지 말고 간결하게 작성하세요.\n- 객관식 choices는 반드시 5개입니다.\n- 서술형 choices는 빈 배열 []입니다.`;
+    const compactPrompt = `${prompt}\n\n[서버 안정화용 추가 지시]\n- 반드시 submit_exam 도구만 사용하세요. 일반 텍스트 출력 금지.\n- 전체 8문항 기준이면 지문 묶음은 최대 3개만 사용하세요.\n- 각 passage는 설명문 70~95단어, 대화문 8~10줄 이내로 짧게 작성하세요.\n- 후속 연계 문항은 passage를 빈 문자열로 두고, stem은 발문만 작성하세요.\n- 어법 문항에서도 지문 전체를 stem에 다시 붙여넣지 마세요.\n- choices는 객관식 5개, 각 선택지는 18단어 이내로 작성하세요.\n- explanation은 1문장만 작성하세요.\n- 서술형이 0문항이면 서술형을 절대 생성하지 마세요.`;
 
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
-        max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 4200),
-        tools: [toolSchema],
-        tool_choice: { type: 'tool', name: 'submit_exam' },
-        messages: [{ role: 'user', content: compactPrompt }]
-      })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 55000);
 
-    const data = await anthropicRes.json();
+    let anthropicRes;
+    try {
+      anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+          max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 3200),
+          temperature: 0.35,
+          tools: [toolSchema],
+          tool_choice: { type: 'tool', name: 'submit_exam' },
+          messages: [{ role: 'user', content: compactPrompt }]
+        })
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const raw = await anthropicRes.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (jsonErr) {
+      data = { raw: raw.slice(0, 1000) };
+    }
+
     if (!anthropicRes.ok) {
+      const msg = data?.error?.message || data?.message || raw || `Claude API 오류 (${anthropicRes.status})`;
+      console.error('ANTHROPIC_ERROR:', anthropicRes.status, data);
       return res.status(anthropicRes.status).json({
-        error: data?.error?.message || 'Claude API 오류',
+        error: typeof msg === 'string' ? msg : JSON.stringify(msg),
+        status: anthropicRes.status,
         raw: data
       });
     }
@@ -76,14 +102,32 @@ export default async function handler(req, res) {
       ? data.content.find(block => block.type === 'tool_use' && block.name === 'submit_exam')
       : null;
 
-    if (toolUse?.input?.questions) {
+    if (toolUse?.input?.questions && Array.isArray(toolUse.input.questions)) {
       return res.status(200).json({ questions: toolUse.input.questions });
     }
 
-    const text = data?.content?.map(block => block.text || '').join('\n') || '';
-    return res.status(200).json({ text });
+    const text = Array.isArray(data?.content)
+      ? data.content.map(block => block.text || '').join('\n')
+      : '';
+
+    if (text) {
+      return res.status(200).json({ text });
+    }
+
+    return res.status(500).json({
+      error: 'Claude가 문항 데이터를 반환하지 않았습니다. 다시 생성해 주세요.',
+      raw: data
+    });
   } catch (err) {
     console.error('SERVER_ERROR:', err);
-    return res.status(500).json({ error: err.message || '서버 오류' });
+    if (err?.name === 'AbortError') {
+      return res.status(504).json({
+        error: '생성 시간이 길어 서버 제한에 걸렸습니다. 문항 수를 줄이거나 다시 생성해 주세요.'
+      });
+    }
+    return res.status(500).json({
+      error: err?.message || String(err) || '서버 오류',
+      name: err?.name || 'Error'
+    });
   }
 }
