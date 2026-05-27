@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
-        max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 3500),
+        max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 4200),
         tools: [toolSchema],
         tool_choice: { type: 'tool', name: 'submit_exam' },
         messages: [{ role: 'user', content: compactPrompt }]
