@@ -1,1 +1,166 @@
-
+{
+  "misagang": {
+    "1": {
+      "2025_1": {
+        "school": "미사강변중학교",
+        "grade": 1,
+        "exam": "2025_1",
+        "source_pdf": "미사강변중_1학년_2025_1학기.pdf",
+        "format_profile": {
+          "total_questions": 25,
+          "objective_questions": 22,
+          "subjective_questions": 3,
+          "common_types": [
+            "어법·어휘",
+            "내용일치",
+            "빈칸추론",
+            "글의순서",
+            "서술형 영작"
+          ],
+          "style_notes": [
+            "교과서 본문 변형과 어법 확인 문항 비중이 높음",
+            "서술형은 조건 제시형 영작과 핵심 문장 재구성이 중심",
+            "선택지는 5지선다 형식을 기본으로 유지"
+          ]
+        },
+        "layout_rules": {
+          "passage_first": true,
+          "answer_space_for_subjective": true
+        }
+      },
+      "2025_2": {
+        "school": "미사강변중학교",
+        "grade": 1,
+        "exam": "2025_2",
+        "source_pdf": "미사강변중_1학년_2025_2학기.pdf",
+        "format_profile": {
+          "total_questions": 24,
+          "objective_questions": 21,
+          "subjective_questions": 3,
+          "common_types": [
+            "어휘",
+            "어법",
+            "요지",
+            "문장삽입",
+            "서술형 해석"
+          ],
+          "style_notes": [
+            "어휘는 문맥상 의미 파악형으로 자주 출제",
+            "어법은 밑줄 선택형과 문장 완성형이 섞임",
+            "독해는 내용일치와 문장삽입의 체감 난도가 있음"
+          ]
+        },
+        "layout_rules": {
+          "passage_first": true,
+          "answer_space_for_subjective": true
+        }
+      }
+    },
+    "2": {},
+    "3": {}
+  },
+  "yunseul": {
+    "1": {
+      "2025_1": {
+        "school": "윤슬중학교",
+        "grade": 1,
+        "exam": "2025_1",
+        "source_pdf": "윤슬중_1학년_2025_1학기.pdf",
+        "format_profile": {
+          "total_questions": 25,
+          "objective_questions": 23,
+          "subjective_questions": 2,
+          "common_types": [
+            "내용일치",
+            "어법",
+            "대의파악",
+            "순서배열",
+            "서술형 조건영작"
+          ],
+          "style_notes": [
+            "본문 세부내용 확인 문항이 비교적 많음",
+            "서술형은 조건을 모두 반영해야 정답 처리되는 형태",
+            "순서와 삽입 문제는 연결어와 지시어 근거를 요구"
+          ]
+        },
+        "layout_rules": {
+          "passage_first": true,
+          "answer_space_for_subjective": true
+        }
+      }
+    },
+    "2": {},
+    "3": {}
+  },
+  "eungaram": {
+    "1": {
+      "2025_1": {
+        "school": "은가람중학교",
+        "grade": 1,
+        "exam": "2025_1",
+        "source_pdf": "은가람중_1학년_2025_1학기.pdf",
+        "format_profile": {
+          "total_questions": 23,
+          "objective_questions": 20,
+          "subjective_questions": 3,
+          "common_types": [
+            "어휘",
+            "어법",
+            "빈칸추론",
+            "내용일치",
+            "서술형 영작"
+          ],
+          "style_notes": [
+            "어휘와 어법의 기본기 확인 비중이 높음",
+            "서술형은 교과서 핵심 표현을 변형해 쓰는 방식",
+            "난도는 중간 수준이나 실수 유발 선택지가 있음"
+          ]
+        },
+        "layout_rules": {
+          "passage_first": true,
+          "answer_space_for_subjective": true
+        }
+      }
+    },
+    "2": {},
+    "3": {}
+  },
+  "misa": {
+    "1": {
+      "2025_1": {
+        "school": "미사중학교",
+        "grade": 1,
+        "exam": "2025_1",
+        "source_pdf": "미사중_1학년_2025_1학기.pdf",
+        "format_profile": {
+          "total_questions": 26,
+          "objective_questions": 23,
+          "subjective_questions": 3,
+          "common_types": [
+            "어법",
+            "어휘",
+            "제목",
+            "내용일치",
+            "서술형 배열"
+          ],
+          "style_notes": [
+            "어법 문항은 문장 구조 파악을 요구하는 편",
+            "제목·요지 문항은 지문 전체 흐름 이해를 요구",
+            "서술형은 어순 배열과 조건 영작이 섞임"
+          ]
+        },
+        "layout_rules": {
+          "passage_first": true,
+          "answer_space_for_subjective": true
+        }
+      }
+    },
+    "2": {},
+    "3": {}
+  },
+  "hanhol": {
+    "1": {},
+    "2": {},
+    "3": {}
+  }
+}
