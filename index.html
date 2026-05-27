@@ -709,17 +709,34 @@ function getNeighborProfilesForNewSchool(){
 }
 function summarizeProfilesForPrompt(profiles){
   if(!profiles.length) return '- 저장된 JSON 기출 분석 프로필 없음. 일반 내신 출제 원칙을 적용할 것.';
+  const list=(arr,empty='정보 없음')=>Array.isArray(arr)&&arr.length?arr.map(x=>`    - ${x}`).join('\n'):`    - ${empty}`;
   return profiles.map((p,i)=>{
     const f=p.format_profile||{};
+    const a=p.style_analysis||{};
+    const g=p.generation_guidance||{};
     const layout=p.layout_rules||{};
-    const style=(f.style_notes||[]).map(x=>`    - ${x}`).join('\n')||'    - 특이사항 없음';
+    const style=list(f.style_notes,'특이사항 없음');
     const types=(f.common_types||[]).join(', ')||'유형 정보 없음';
-    return `【기출 프로필 ${i+1}】 ${p.school||''} ${p.grade||''}학년 ${p.exam||''}
+    return `【기출 프로필 ${i+1}】 ${p.school||''} ${p.grade||''}학년 ${p.exam_label||p.exam||''}
 - 총 문항/객관식/서술형: ${f.total_questions??'미상'} / ${f.objective_questions??'미상'} / ${f.subjective_questions??'미상'}
 - 주요 유형: ${types}
 - 지문 배치: ${layout.passage_first===false?'문항별 후배치':'지문 선배치/문항 연계'}
 - 서술형 답란: ${layout.answer_space_for_subjective===false?'별도 답란 약함':'별도 답란 필요'}
-- 스타일 메모:
+- 실제 시험 방향:
+${list(a.core_direction || f.style_notes,'특이사항 없음')}
+- 학생들이 지문에서 중점적으로 공부해야 할 부분:
+${list(a.student_study_focus,'자료 없음')}
+- 독해/지문 분석 포인트:
+${list(a.reading_focus,'자료 없음')}
+- 문법·어휘 출제 포인트:
+${list(a.grammar_vocab_focus,'자료 없음')}
+- 문제 유형별 출제 방식:
+${list(a.question_type_analysis,'자료 없음')}
+- 오답 함정/변별 포인트:
+${list(a.trap_patterns,'자료 없음')}
+- 모의고사 생성 시 반드시 반영할 규칙:
+${list(g.generation_rules || g.high_priority_types,'자료 없음')}
+- 기본 스타일 메모:
 ${style}`;
   }).join('\n\n');
 }
