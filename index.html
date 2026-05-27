@@ -224,7 +224,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   break-inside:avoid;
   -webkit-column-break-inside:avoid;
   page-break-inside:avoid;
-  padding:10px 18px;
+  padding:7px 14px;
   border-bottom:1px solid #eef0f5;
   /* display:inline-block은 컬럼 break-inside 동작에 필요 */
   display:inline-block;
@@ -237,12 +237,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .q-row{
   display:flex;
   align-items:baseline;
-  gap:6px;
-  margin-bottom:5px;
+  gap:5px;
+  margin-bottom:4px;
 }
 .q-num{
   flex-shrink:0;
-  width:20px;height:20px;
+  width:19px;height:19px;
   background:var(--navy);color:white;
   border-radius:50%;
   display:inline-flex;align-items:center;justify-content:center;
@@ -251,8 +251,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 }
 .q-num-subj{background:var(--accent);}
 .q-stem-text{
-  flex:1;font-size:10pt;font-weight:600;
-  line-height:1.5;color:var(--ink);
+  flex:1;font-size:9.4pt;font-weight:600;
+  line-height:1.42;color:var(--ink);
   word-break:keep-all;
 }
 /* 위첨자: 유형·난이도·배점 */
@@ -267,8 +267,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 /* 지문 */
 .q-passage{
   background:#f7f8fc;border-left:2.5px solid var(--blue);
-  padding:7px 10px;margin:5px 0 7px 26px;
-  font-size:9pt;line-height:1.8;
+  padding:6px 9px;margin:4px 0 6px 24px;
+  font-size:8.6pt;line-height:1.62;
   border-radius:0 3px 3px 0;color:#222;
   word-break:keep-all;
 }
@@ -296,8 +296,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 }
 
 /* 선택지 */
-.q-choices{display:flex;flex-direction:column;gap:2px;margin-left:26px;}
-.q-choice{display:flex;gap:5px;font-size:9pt;padding:2px 4px;border-radius:3px;line-height:1.55;word-break:keep-all;}
+.q-choices{display:flex;flex-direction:column;gap:1px;margin-left:24px;}
+.q-choice{display:flex;gap:5px;font-size:8.6pt;padding:1px 3px;border-radius:3px;line-height:1.38;word-break:keep-all;}
 .q-cnum{font-family:var(--font-mono);font-size:8pt;color:var(--muted);min-width:13px;padding-top:1px;flex-shrink:0;}
 
 /* 서술형 답란 */
@@ -1117,6 +1117,9 @@ ${ratioLines}
 - 대화문은 단순 내용일치만 내지 말고 Q&A 불일치, 마지막 조언, 대화 흐름상 어색한 문장, 화자의 다음 행동 중 하나를 반드시 포함하세요.
 - 같은 대화문 또는 지문에서 내용문항과 어법문항을 함께 낼 경우, 첫 passage에 ⓐ~ⓔ와 [u]표시를 미리 포함하고 후속 문항은 passage를 반드시 빈 문자열로 두세요. 후속 문항의 stem이나 passage에 같은 지문/대화문을 다시 붙여넣지 마세요.
 - 8문항 축소 테스트는 최대 3개의 원문 묶음만 사용하세요. 주제와 무관한 새 지문을 계속 만들지 말고, 설명문 1묶음·정보문 1묶음·대화문 1묶음 안에서 2~3문항씩 연계하세요.
+- 8문항 테스트는 PDF 2쪽 안에 들어가야 합니다. 설명문 지문은 80~110단어, 대화문은 8~10줄 이내, 선택지는 각 12단어 이내로 간결하게 만드세요.
+- 후속 어법 문항의 stem에는 전체 지문을 절대 다시 쓰지 마세요. stem은 “위 글에서 밑줄 친 ⓐ~ⓔ 중 어법상 어색한 것은?”처럼 짧은 발문만 쓰고, ⓐ~ⓔ 표식은 첫 passage에 미리 넣으세요.
+- as 용법·연결어 문항도 긴 새 지문을 만들기보다 앞선 설명문/대화문 소재를 활용하고, 예문과 선택지는 짧게 유지하세요.
 - 시험범위 지문이 입력된 경우, 새로운 지문을 창작하지 말고 입력 지문의 문장·어휘·문법 포인트를 우선 변형하세요.
 - 시험범위 지문이 입력되지 않은 경우에는 샘플 지문 기반 생성임을 전제로 하되, 서로 무관한 주제를 과도하게 늘리지 마세요. 연결어·as 용법 문항도 앞서 사용한 지문/대화문의 소재를 재활용하세요.
 ${custom?'- 추가 요청: '+custom:''}${passageNote}
@@ -1127,6 +1130,54 @@ ${custom?'- 추가 요청: '+custom:''}${passageNote}
 - 선택지는 ① 기호를 포함하지 않아도 됩니다. 화면에서 자동으로 ①~⑤가 표시됩니다.
 - 어법 문제에서는 stem 또는 passage 안에 ⓐ~ⓔ 표식을 반드시 넣고, 밑줄이 필요한 표현은 [u]표현[/u]으로 표시하세요.
 - 서술형이 필요한 경우에만 choices:[], answer:"모범답안: ..." 형식을 사용하세요.`;
+}
+
+
+// ── 문항 후처리: 반복 지문 병합/길이 정리 ─────────────────────────
+function splitStemWithEmbeddedPassage(stem){
+  const text=String(stem||'').trim();
+  if(text.length<260)return null;
+  const qpos=text.search(/[?？]/);
+  if(qpos<15 || qpos>160)return null;
+  const prefix=text.slice(0,qpos+1).trim();
+  const body=text.slice(qpos+1).trim();
+  if(body.length<160)return null;
+  return {prefix,body};
+}
+function tokenSet(str){
+  return new Set(String(str||'').toLowerCase().replace(/[^a-z0-9가-힣\s]/g,' ').split(/\s+/).filter(w=>w.length>3));
+}
+function jaccard(a,b){
+  const A=tokenSet(a),B=tokenSet(b); if(!A.size||!B.size)return 0;
+  let inter=0; A.forEach(x=>{if(B.has(x))inter++;});
+  return inter/(A.size+B.size-inter);
+}
+function normalizeGeneratedQuestions(qs){
+  const out=qs.map(q=>({...q}));
+  for(let i=0;i<out.length;i++){
+    const q=out[i];
+    if((!q.passage || !String(q.passage).trim()) && q.stem){
+      const split=splitStemWithEmbeddedPassage(q.stem);
+      if(split){
+        q.stem=split.prefix;
+        // 직전 1~2문항의 passage와 유사하면, 표식이 포함된 본문을 앞 문항 passage로 병합
+        let merged=false;
+        for(let j=i-1;j>=Math.max(0,i-2);j--){
+          if(out[j].passage && jaccard(out[j].passage,split.body)>0.25){
+            out[j].passage=split.body;
+            merged=true;
+            break;
+          }
+        }
+        if(!merged) q.passage=split.body;
+      }
+    }
+    // 선택지 길이가 과도하게 긴 경우 출력만 줄이지는 않되, 앞뒤 공백/기호 정리
+    if(Array.isArray(q.choices)){
+      q.choices=q.choices.map(c=>String(c||'').replace(/\s+/g,' ').trim());
+    }
+  }
+  return out;
 }
 
 // ── API 호출 ──────────────────────────────────────
@@ -1173,6 +1224,7 @@ async function generate(){
     if(!Array.isArray(questions)||questions.length===0){
       throw new Error('생성된 문항이 없습니다. 다시 시도해주세요.');
     }
+    questions=normalizeGeneratedQuestions(questions);
     if(state.sub===0){
       questions=questions.filter(q=>q.format!=='서술형');
     }
