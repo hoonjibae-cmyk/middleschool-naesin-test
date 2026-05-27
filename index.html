@@ -273,6 +273,28 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   word-break:keep-all;
 }
 
+
+/* 보기/어법 표시 개선 */
+.q-choice .q-cnum{
+  font-family:var(--font-serif);
+  font-weight:700;
+  color:var(--navy);
+}
+.q-choice em, .q-passage em{
+  font-style:normal;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  font-weight:600;
+}
+.q-passage .mark{
+  display:inline-block;
+  font-family:var(--font-mono);
+  font-size:8pt;
+  font-weight:700;
+  color:var(--accent);
+  margin-right:2px;
+}
+
 /* 선택지 */
 .q-choices{display:flex;flex-direction:column;gap:2px;margin-left:26px;}
 .q-choice{display:flex;gap:5px;font-size:9pt;padding:2px 4px;border-radius:3px;line-height:1.55;word-break:keep-all;}
@@ -1086,13 +1108,21 @@ ${ratioLines}
 - 유형 배분: ${typeDesc}
 - 중학교 내신 특성에 맞게 출제하되, ${sd.short} 기출 프로필의 고우선 유형을 먼저 채우세요.
 - 가능한 경우 1개 지문에서 2문항 이상을 연계하세요. 예: 내용 불일치 + 제목/요지, 빈칸 + 어법, 어휘 + 내용일치.
+- 같은 지문 연계 문항은 반드시 연속 번호로 배치하고, 첫 문항에만 passage를 넣으세요. 후속 문항의 passage는 반드시 빈 문자열로 두세요.
 - ${state.sub===0?'이번 요청은 서술형 0문항입니다. 서술형 문제와 서술형 답란을 절대 만들지 마세요.':'서술형은 반드시 구체적인 조건과 모범답안을 포함하세요. 빈 답란만 생성하지 마세요.'}
 - 객관식은 5지선다로 만들고, 쉬운 단순 해석 문제보다 근거 확인이 필요한 선택지로 구성하세요.
+- 오답 선지는 너무 명백하게 틀리게 만들지 말고, 지문의 대상·범위·원인·결과·순서·상징 의미를 살짝 바꾼 함정형으로 만드세요.
+- 내용일치/불일치 문항은 지문에 없는 새 정보를 만들기보다 지문 표현을 미묘하게 바꾼 선택지를 최소 3개 포함하세요.
+- 어법 문항은 밑줄 후보를 ⓐ~ⓔ로 표시하고, 필요한 핵심 표현은 [u]표현[/u] 형식으로 감싸세요.
+- 대화문은 단순 내용일치만 내지 말고 Q&A 불일치, 마지막 조언, 대화 흐름상 어색한 문장, 화자의 다음 행동 중 하나를 반드시 포함하세요.
+- 시험범위 지문이 입력된 경우, 새로운 지문을 창작하지 말고 입력 지문의 문장·어휘·문법 포인트를 우선 변형하세요.
 ${custom?'- 추가 요청: '+custom:''}${passageNote}
 
 [출력 형식 — 서버 구조화 출력용 지시]
 [{"number":1,"type":"어법·어휘","subtype":"세부유형","format":"객관식","difficulty":"보통","passage":"첫 연계 문항에만 지문 입력","stem":"발문","choices":["① ...","② ...","③ ...","④ ...","⑤ ..."],"answer":3,"explanation":"정답 근거와 오답 함정을 2문장으로 설명"}]
 - 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.
+- 선택지는 ① 기호를 포함하지 않아도 됩니다. 화면에서 자동으로 ①~⑤가 표시됩니다.
+- 어법 문제에서는 stem 또는 passage 안에 ⓐ~ⓔ 표식을 반드시 넣고, 밑줄이 필요한 표현은 [u]표현[/u]으로 표시하세요.
 - 서술형이 필요한 경우에만 choices:[], answer:"모범답안: ..." 형식을 사용하세요.`;
 }
 
@@ -1149,6 +1179,21 @@ async function generate(){
   finally{setLoading(false);}
 }
 
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function renderText(s){
+  let out=escapeHtml(s);
+  // Claude가 <u> 대신 [u]...[/u] 또는 __...__로 표시한 어법 포인트를 시험지에서 밑줄로 표현
+  out=out.replace(/\[u\]([\s\S]*?)\[\/u\]/g,'<em>$1</em>');
+  out=out.replace(/__([^_]{1,80})__/g,'<em>$1</em>');
+  // ⓐ~ⓔ 표식을 조금 더 선명하게
+  out=out.replace(/([ⓐⓑⓒⓓⓔ])/g,'<span class="mark">$1</span>');
+  return out.replace(/\n/g,'<br>');
+}
+function choiceNum(i){return ['①','②','③','④','⑤'][i] || String(i+1);}
+
 // ── 시험지 렌더링 ─────────────────────────────────
 function renderSheet(){
   const sd=SCHOOLS[state.school];
@@ -1176,15 +1221,15 @@ function renderSheet(){
     const choicesHtml=isSubj
       ?`<div class="subj-ans"><span class="subj-ans-label">답:</span></div>`
       :(q.choices||[]).map((c,ci)=>{
-          const txt=c.replace(/^[①②③④⑤]\s*/,'');
-          return `<div class="q-choice"><span class="q-cnum">${ci+1}</span><span>${txt}</span></div>`;
+          const txt=String(c||'').replace(/^[①②③④⑤]\s*/,'');
+          return `<div class="q-choice"><span class="q-cnum">${choiceNum(ci)}</span><span>${renderText(txt)}</span></div>`;
         }).join('');
     el.innerHTML=`
       <div class="q-row">
         <span class="q-num${isSubj?' q-num-subj':''}">${q.number}</span>
-        <span class="q-stem-text">${q.stem}<sup class="q-meta${isSubj?' q-meta-subj':''}">${typeLabel}${diffLabel} ${ptsLabel}</sup></span>
+        <span class="q-stem-text">${renderText(q.stem)}<sup class="q-meta${isSubj?' q-meta-subj':''}">${escapeHtml(typeLabel)}${escapeHtml(diffLabel)} ${escapeHtml(ptsLabel)}</sup></span>
       </div>
-      ${showPassage?`<div class="q-passage">${q.passage.replace(/\n/g,'<br>')}</div>`:''}
+      ${showPassage?`<div class="q-passage">${renderText(q.passage)}</div>`:''}
       <div class="q-choices">${choicesHtml}</div>`;
     col.appendChild(el);
   });
