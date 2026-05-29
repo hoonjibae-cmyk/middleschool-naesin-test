@@ -1,7 +1,7 @@
 function compactUserPrompt(prompt, maxChars = 4200) {
   const text = String(prompt || '');
   const keepSections = [];
-  const sectionNames = ['[학교 정보]', '[교재 및 시험 범위]', '[출제 조건]', '[외부 지문]'];
+  const sectionNames = ['[학교 정보]', '[교재 및 시험 범위]', '[저장 교과서 자료', '[출제 조건]', '[외부 지문]'];
   for (let i = 0; i < sectionNames.length; i++) {
     const name = sectionNames[i];
     const start = text.indexOf(name);
@@ -18,10 +18,33 @@ function compactUserPrompt(prompt, maxChars = 4200) {
   return joined.length > maxChars ? joined.slice(0, maxChars) : joined;
 }
 
-function getMigangBlueprint({ fullTotal, sectionIndex, startNo, count, subjective }) {
+function getMigangBlueprint({ fullTotal, sectionIndex, startNo, count, subjective, hasTextbookSources=false }) {
   const total = Number(fullTotal) || count;
   const idx = Number(sectionIndex) || 1;
   const endNo = startNo + count - 1;
+
+  if (hasTextbookSources) {
+    const pattern = (idx - 1) % 6;
+    if (pattern === 0) return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 자료의 Munjado 정의/여덟 한자/상징 의미 원문을 기반으로 출제한다.
+- 유형: 내용 불일치, 제목/요지, 지칭어/어휘 중 조합.
+- 원문에 없는 Big data, Kimchi, Tea Ceremony, Plastic, Social Media 등 새 소재 금지.`;
+    if (pattern === 1) return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 자료의 hyo/잉어/어머니 이야기, 가정법 과거, to부정사의 의미상 주어를 기반으로 출제한다.
+- 유형: 내용일치/불일치, 빈칸, 어법상 어색한 것, 문맥어휘 중 조합.`;
+    if (pattern === 2) return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 자료의 bamboo/chung, lotus/ui, loyalty/justice/despite difficulties 원문을 기반으로 출제한다.
+- 유형: 내용 불일치, 제목/요지, 연결어/전치사, 어휘 의미관계 중 조합.`;
+    if (pattern === 3) return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 자료의 Munjado as a study tool, remind A of B, harmony in family and society 원문을 기반으로 출제한다.
+- 유형: 요지, 내용일치, 어법, 지칭어 중 조합.`;
+    if (pattern === 4) return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 대화문의 선호 표현, 의견 표현, 전시회/탈춤 공연 대화 기반으로 출제한다.
+- 유형: 내용일치, Q&A 짝짓기, 마지막 행동, 흐름상 어색한 문장 중 조합.`;
+    return `[v17 교과서 원문 기반 설계: ${startNo}~${endNo}번]
+- 저장 교과서 문법 포인트 집중: 가정법 과거, to부정사의 의미상 주어, 주격 관계대명사, despite, remind A of B, 현재완료 경험.
+- 유형: ⓐ~ⓔ 어법상 어색한 것, 모두 고르기, 개수 세기, 용법 구분 중 조합.`;
+  }
 
   if (total <= 8) {
     if (idx === 1) {
@@ -144,12 +167,14 @@ export default async function handler(req, res) {
     const requestedSubjective = Math.max(0, Math.min(requestedTotal, Number(subjective) || 0));
     const requestedObjective = requestedTotal - requestedSubjective;
     const startNo = Number(startNumber) || 1;
-    const essentialPrompt = compactUserPrompt(prompt, 5200);
-    const blueprint = getMigangBlueprint({ fullTotal, sectionIndex, startNo, count: requestedTotal, subjective: requestedSubjective });
+    const essentialPrompt = compactUserPrompt(prompt, 7600);
+    const hasTextbookSources = prompt.includes('[저장 교과서 자료');
+    const blueprint = getMigangBlueprint({ fullTotal, sectionIndex, startNo, count: requestedTotal, subjective: requestedSubjective, hasTextbookSources });
 
     const stablePrompt = `${essentialPrompt}
 
 ${blueprint}\n\n[이번 구간 생성 지시]\n전체 ${Number(fullTotal) || requestedTotal}문항 중 ${sectionIndex}/${sectionTotal}구간입니다.\n이번 구간 역할: ${sectionLabel}\n문항 번호: ${startNo}번부터 ${startNo + requestedTotal - 1}번까지\n정확히 ${requestedTotal}문항만 생성하세요. 객관식 ${requestedObjective}문항, 서술형 ${requestedSubjective}문항입니다.\n\n[품질 규칙]\n- passage는 구간당 최대 2개까지 허용합니다. 단, 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.\n- passage는 65~95단어, 대화문은 7~10줄 이내로 짧게 쓰세요.\n- 선택지는 객관식마다 정확히 5개, 각 선택지는 16단어 이내입니다.
+- 저장 교과서 자료가 제공된 경우, 반드시 그 원문/대화문을 기반으로 출제하세요. 저장 원문에 없는 Big data, Kimchi, Tea Ceremony, Plastic, Social Media 등 새 소재는 외부지문 비율이 있을 때만 허용합니다.
 - camouflage, plastic pollution, social media처럼 미강중3 프로필과 무관한 일반 독해 소재는 사용하지 마세요. 단, 사용자가 외부 지문으로 직접 입력한 경우는 예외입니다.
 - 선택지에는 그럴듯한 함정 2개 이상을 포함하세요.\n- explanation은 1문장만 쓰세요.\n- 서술형 0문항이면 서술형을 절대 만들지 마세요.\n\n[출력 형식]\n반드시 순수 JSON 배열만 출력하세요. 코드블록, 설명, 한국어 머리말을 절대 붙이지 마세요.\n각 객체 필드: number,type,subtype,format,difficulty,passage,stem,choices,answer,explanation,points\n객관식 answer는 1~5 숫자입니다.\n예시: [{"number":${startNo},"type":"내용일치","subtype":"불일치","format":"객관식","difficulty":"보통","passage":"...","stem":"위 글의 내용과 일치하지 않는 것은?","choices":["...","...","...","...","..."],"answer":1,"explanation":"...","points":4}]`;
 
