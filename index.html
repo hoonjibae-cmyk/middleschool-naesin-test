@@ -132,6 +132,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .qc-btn{width:21px;height:21px;border:1px solid var(--border);background:white;border-radius:3px;cursor:pointer;font-size:0.8rem;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
 .qc-btn:hover{border-color:var(--navy);color:var(--navy);}
 .qc-val{font-family:var(--font-mono);font-size:0.85rem;font-weight:500;min-width:18px;text-align:center;}
+.qc-input{width:42px;height:23px;border:1px solid var(--border);border-radius:3px;text-align:center;font-family:var(--font-mono);font-size:0.82rem;font-weight:500;outline:none;}
+.qc-input:focus{border-color:var(--navy);}
+.qc-input::-webkit-outer-spin-button,.qc-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.qc-input{appearance:textfield;-moz-appearance:textfield;}
+
 .type-detail-btn{font-size:0.69rem;color:var(--blue);cursor:pointer;text-decoration:underline;margin-top:3px;}
 .type-detail-box{display:none;margin-top:7px;background:#f8f9fc;border:1px solid var(--border);border-radius:5px;padding:8px 10px;}
 .type-detail-box.on{display:block;}
@@ -427,9 +432,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   <div class="sb-sec">
     <div class="sb-title">문항 수</div>
     <div class="qcount-grid">
-      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><span class="qc-val" id="q-total">30</span><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
-      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><span class="qc-val" id="q-obj">30</span><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
-      <div class="qcount-item"><label>서술형</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('sub',-1)">−</button><span class="qc-val" id="q-sub">0</span><button class="qc-btn" onclick="chQ('sub',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><input class="qc-input" id="q-total" type="number" min="1" max="40" value="30" onchange="setQ('total',this.value)" oninput="setQ('total',this.value)"><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><input class="qc-input" id="q-obj" type="number" min="0" max="40" value="30" onchange="setQ('obj',this.value)" oninput="setQ('obj',this.value)"><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>서술형</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('sub',-1)">−</button><input class="qc-input" id="q-sub" type="number" min="0" max="40" value="0" onchange="setQ('sub',this.value)" oninput="setQ('sub',this.value)"><button class="qc-btn" onclick="chQ('sub',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
       <div class="qcount-item" style="grid-column:1/-1;">
         <div class="type-detail-btn" onclick="toggleTypeDetail()">▸ 유형별 문항 수 세부 설정</div>
         <div class="type-detail-box" id="type-detail-box"><div id="type-rows"></div></div>
@@ -843,29 +848,51 @@ function updateMixTotal(){
   w.textContent='합계: '+t+'%';w.className='mix-total '+(t===100?'ok':'ng');
 }
 
+function clampInt(v,min,max,fallback){
+  const n=parseInt(v,10);
+  if(Number.isNaN(n))return fallback;
+  return Math.max(min,Math.min(max,n));
+}
 function syncQDisplay(){
-  state.obj=Math.max(0,Math.min(state.total,state.obj));
-  state.sub=Math.max(0,Math.min(state.total,state.sub));
+  state.total=clampInt(state.total,1,40,30);
+  state.sub=clampInt(state.sub,0,state.total,0);
+  state.obj=clampInt(state.obj,0,state.total,state.total-state.sub);
   if(state.obj+state.sub!==state.total){
     if(state.sub===0) state.obj=state.total;
     else state.obj=Math.max(0,state.total-state.sub);
   }
-  ['total','obj','sub'].forEach(k=>{const el=document.getElementById('q-'+k);if(el)el.textContent=state[k];});
+  const map={total:state.total,obj:state.obj,sub:state.sub};
+  Object.entries(map).forEach(([k,v])=>{
+    const el=document.getElementById('q-'+k);
+    if(el){
+      if('value' in el)el.value=v;
+      else el.textContent=v;
+    }
+  });
 }
-function chQ(t,d){
+function setQ(t,val){
+  const n=parseInt(val,10);
+  if(Number.isNaN(n))return;
   if(t==='total'){
-    state.total=Math.max(5,Math.min(40,state.total+d));
-    if(state.sub===0) state.obj=state.total;
+    const oldTotal=state.total;
+    state.total=clampInt(n,1,40,state.total);
+    if(state.sub===0 || state.obj===oldTotal)state.obj=state.total;
+    else state.obj=Math.max(0,state.total-state.sub);
   }
   if(t==='obj'){
-    state.obj=Math.max(0,Math.min(state.total,state.obj+d));
+    state.obj=clampInt(n,0,state.total,state.obj);
     state.sub=Math.max(0,state.total-state.obj);
   }
   if(t==='sub'){
-    state.sub=Math.max(0,Math.min(state.total,state.sub+d));
+    state.sub=clampInt(n,0,state.total,state.sub);
     state.obj=Math.max(0,state.total-state.sub);
   }
   syncQDisplay();
+}
+function chQ(t,d){
+  if(t==='total')setQ('total',state.total+d);
+  if(t==='obj')setQ('obj',state.obj+d);
+  if(t==='sub')setQ('sub',state.sub+d);
 }
 function toggleTypeDetail(){document.getElementById('type-detail-box').classList.toggle('on');}
 function renderTypeRows(){
@@ -1003,7 +1030,7 @@ ${custom?'- 추가 요청: '+custom:''}${passageNote}
 
 // ── API 호출 ──────────────────────────────────────
 function buildGenerationSections(total, sub){
-  const maxPerCall=6; // Vercel/Claude 안정성을 위한 1회 생성 상한
+  const maxPerCall=4; // 안정성을 위한 1회 생성 상한: 30문항은 여러 구간으로 분할
   const sectionLabels=['대화문·세부내용','설명문·내용일치/제목','정보문·빈칸/어법','어법·어휘 변별','고난도 종합'];
   const sections=[];
   let remaining=total;
@@ -1162,7 +1189,7 @@ async function generate(){
       let part=[];
       if(Array.isArray(data.questions)) part=data.questions;
       else if(typeof data.text==='string'){
-        const mm=data.text.match(/\[[\s\S]*\]/); if(!mm) throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 응답에서 문항 배열을 찾지 못했습니다.`);
+        const mm=data.text.match(/\[[\s\S]*\]/); if(!mm) throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 응답에서 문항 배열을 찾지 못했습니다. 응답 미리보기: ${data.text.slice(0,160)}`);
         part=JSON.parse(mm[0]);
       } else throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 문항 데이터가 없습니다.`);
       part=normalizeQuestions(part).slice(0,sec.count).map((q,i)=>({...q,number:sec.startNumber+i}));
