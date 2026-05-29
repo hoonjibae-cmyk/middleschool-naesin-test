@@ -226,9 +226,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .sh-badge-wrap{padding:5px 20px 0;}
 .sh-badge{display:inline-flex;align-items:center;background:var(--navy);color:white;font-size:7.5pt;font-family:var(--font-mono);padding:2px 9px;border-radius:10px;}
 
-/* ── A4 안정형 페이지 그룹 레이아웃 ──
-   4문항을 한 페이지 그룹으로 묶어 1/2, 3/4 순서가 페이지 안에서 유지되도록 한다.
-   html2pdf에서 grid item이 페이지 중간에 잘리는 문제를 줄이기 위해 q-page 단위로만 페이지를 넘긴다.
+/* ── A4 자동 페이지네이션 2단 레이아웃 ──
+   읽는 순서: 한 페이지 안에서 왼쪽 열 위→아래를 먼저 채우고, 그 다음 오른쪽 열 위→아래로 이동한다.
+   문항 수를 고정하지 않고 실제 문항 높이를 측정하여 A4 안에 들어갈 만큼만 배치한다.
    ─────────────────────────── */
 .q-columns{
   display:block;
@@ -238,25 +238,35 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   display:grid;
   grid-template-columns:1fr 1fr;
   column-gap:0;
-  row-gap:0;
   break-after:page;
   page-break-after:always;
   border-bottom:1px solid #dde3f0;
+  height:272mm;
+  overflow:hidden;
 }
+.q-page.first-page{height:228mm;}
 .q-page:last-child{break-after:auto;page-break-after:auto;border-bottom:none;}
+.q-col{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  min-width:0;
+  height:100%;
+  overflow:hidden;
+}
+.q-col.right{border-left:1px solid #dde3f0;}
 
 /* 개별 문제 - 페이지 경계에서 잘리지 않음 */
 .q-wrap{
   break-inside:avoid;
   page-break-inside:avoid;
-  padding:7px 15px;
+  padding:6px 13px;
   border-bottom:1px solid #eef0f5;
   width:100%;
   vertical-align:top;
+  flex:0 0 auto;
 }
-.q-page .q-wrap:nth-child(even){border-left:1px solid #dde3f0;}
 .q-wrap.q-subj{background:#fffdf8;border-left:3px solid var(--accent);}
-
 /* 문제 행: [번호원] [발문] [위첨자 유형·배점] */
 .q-row{
   display:flex;
@@ -275,8 +285,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 }
 .q-num-subj{background:var(--accent);}
 .q-stem-text{
-  flex:1;font-size:9.2pt;font-weight:600;
-  line-height:1.35;color:var(--ink);
+  flex:1;font-size:8.9pt;font-weight:600;
+  line-height:1.32;color:var(--ink);
   word-break:keep-all;
 }
 /* 위첨자: 유형·난이도·배점 */
@@ -336,7 +346,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   .content{padding:0;}
   #exam-sheet{display:block!important;border:none;border-radius:0;box-shadow:none;}
   .q-columns{display:block!important;}
-  .q-page{display:grid!important;grid-template-columns:1fr 1fr!important;break-after:page;page-break-after:always;}
+  .q-page{display:grid!important;grid-template-columns:1fr 1fr!important;break-after:page;page-break-after:always;overflow:hidden;}
   .q-page:last-child{break-after:auto;page-break-after:auto;}
   .q-wrap{break-inside:avoid;page-break-inside:avoid;}
 }
@@ -1334,17 +1344,13 @@ function renderSheet(){
   document.getElementById('sh-badge').textContent=`${sd.name} · ${state.grade}학년`;
   const tf=document.getElementById('sh-teacher-field'),tl=document.getElementById('sh-teacher-lbl');
   if(teacher){tf.style.display='';tl.textContent=teacher;}else{tf.style.display='none';}
+
   const col=document.getElementById('q-columns');
   col.innerHTML='';
+  document.getElementById('exam-sheet').style.display='block';
+
   let lastPassageNorm='';
-  let currentPage=null;
-  const perPage=4;
-  questions.forEach((q,idx)=>{
-    if(idx%perPage===0){
-      currentPage=document.createElement('div');
-      currentPage.className='q-page';
-      col.appendChild(currentPage);
-    }
+  const makeQuestionEl=(q)=>{
     const isSubj=q.format==='서술형';
     const el=document.createElement('div');
     el.className='q-wrap'+(isSubj?' q-subj':'');
@@ -1367,9 +1373,45 @@ function renderSheet(){
       </div>
       ${showPassage?`<div class="q-passage">${renderText(q.passage)}</div>`:''}
       <div class="q-choices">${choicesHtml}</div>`;
-    currentPage.appendChild(el);
+    return el;
+  };
+
+  const createPage=()=>{
+    const page=document.createElement('div');
+    page.className='q-page'+(col.children.length===0?' first-page':'');
+    const left=document.createElement('div');left.className='q-col left';
+    const right=document.createElement('div');right.className='q-col right';
+    page.appendChild(left);page.appendChild(right);col.appendChild(page);
+    return {page,left,right,current:left};
+  };
+
+  let pg=createPage();
+  const tryAppend=(target,el)=>{
+    target.appendChild(el);
+    const ok=target.scrollHeight<=target.clientHeight+2;
+    if(!ok)target.removeChild(el);
+    return ok;
+  };
+
+  questions.forEach((q)=>{
+    let el=makeQuestionEl(q);
+    // 1순위: 같은 열에서 위→아래로 채운다. 넘치면 오른쪽 열, 오른쪽도 넘치면 다음 페이지 왼쪽으로 이동.
+    if(!tryAppend(pg.current,el)){
+      if(pg.current===pg.left){
+        pg.current=pg.right;
+        if(!tryAppend(pg.current,el)){
+          pg=createPage();
+          pg.current=pg.left;
+          tryAppend(pg.current,el);
+        }
+      }else{
+        pg=createPage();
+        pg.current=pg.left;
+        tryAppend(pg.current,el);
+      }
+    }
   });
-  document.getElementById('exam-sheet').style.display='block';
+
   document.getElementById('toolbar').className='toolbar on';
   document.getElementById('tb-meta').textContent=`총 ${questions.length}문항 · ${sd.short} ${state.grade}학년`;
 }
@@ -1405,7 +1447,7 @@ function toggleAns(){
 }
 function dlPDF(){
   const title=document.getElementById('cfg-title').value.trim()||'중등_모의고사';
-  html2pdf().set({margin:[6,6,6,6],filename:`목동유쌤_${title}.pdf`,image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,scrollY:0},pagebreak:{mode:['css','legacy'],avoid:['.q-wrap']},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(document.getElementById('exam-sheet')).save();
+  html2pdf().set({margin:[4,5,4,5],filename:`목동유쌤_${title}.pdf`,image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,scrollY:0},pagebreak:{mode:['css','legacy'],avoid:['.q-wrap','.q-page']},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(document.getElementById('exam-sheet')).save();
 }
 function setLoading(on){
   const btn=document.getElementById('gen-btn');
