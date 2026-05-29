@@ -241,10 +241,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   break-after:page;
   page-break-after:always;
   border-bottom:1px solid #dde3f0;
-  min-height:258mm;
+  min-height:252mm;
   overflow:visible;
 }
-.q-page.first-page{min-height:228mm;}
+.q-page.first-page{min-height:224mm;}
 .q-page:last-child{break-after:auto;page-break-after:auto;border-bottom:none;}
 .q-col{
   display:flex;
@@ -260,8 +260,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .q-wrap{
   break-inside:avoid;
   page-break-inside:avoid;
-  padding:8px 12px 9px;
-  margin-bottom:5px;
+  padding:7px 12px 8px;
+  margin-bottom:4px;
   border-bottom:1px solid #eef0f5;
   width:100%;
   vertical-align:top;
@@ -302,7 +302,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 /* 지문 */
 .q-passage{
   background:#f7f8fc;border-left:2.5px solid var(--blue);
-  padding:5px 8px;margin:4px 0 7px 23px;
+  padding:5px 8px;margin:4px 0 6px 23px;
   font-size:8.15pt;line-height:1.46;
   border-radius:0 3px 3px 0;color:#222;
   word-break:keep-all;
@@ -317,7 +317,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 
 /* 선택지 */
 .q-choices{display:flex;flex-direction:column;gap:2px;margin-left:24px;}
-.q-choice{display:flex;gap:5px;font-size:8.35pt;padding:2px 3px;border-radius:3px;line-height:1.4;word-break:keep-all;}
+.q-choice{display:flex;gap:5px;font-size:8.25pt;padding:1.5px 3px;border-radius:3px;line-height:1.36;word-break:keep-all;}
 .q-cnum{font-family:var(--font-mono);font-size:7.5pt;color:var(--muted);min-width:13px;padding-top:1px;flex-shrink:0;}
 
 /* 서술형 답란 */
@@ -1158,11 +1158,12 @@ ${ratioLines}
 - 유형 배분: ${typeDesc}
 - 중학교 내신 특성에 맞게 출제하되, 실제 기출의 지문 포인트와 오답 함정 방식을 우선 반영
 - 30문항 이상 생성 시 내용일치/불일치만 반복하지 말고 지칭어, 빈칸, 문장삽입/순서, 어휘 의미, 어법, 요약문 완성을 고르게 섞으세요.
+- 객관식에서 choices를 비워두거나 '보기 없음'을 넣지 마세요. 단, 지문 안 ①~⑤ 후보를 직접 표시한 어법 문항만 choices를 빈 배열로 둘 수 있습니다.
 - 같은 원문을 재사용하더라도 동일 발문과 동일 선택지 구조를 반복하지 마세요.
 - ${state.sub===0?'서술형 0문항입니다. 서술형 문제와 답란을 만들지 마세요.':'서술형은 조건과 모범답안을 구체적으로 포함하세요.'}
 - 같은 지문 연계 문항은 첫 문항에만 passage를 넣고 후속 문항의 passage는 빈 문자열로 두세요.
 - 첫 문항처럼 발문 아래에 passage가 함께 제시되는 경우에는 발문에서 "위 글/위 대화/위 문장" 대신 "다음 글/다음 대화/다음 문장" 표현을 우선 사용하세요. 후속 연계 문항처럼 passage가 바로 위에 이미 제시된 경우에만 "위 글/위 대화" 표현을 사용하세요.
-- 어법 문항은 후보가 지문 안에 이미 표시되는 경우, passage 안에 ①~⑤ 번호를 직접 넣고 choices는 비워 두거나 단순 중복 선택지를 만들지 마세요. 실제 시험처럼 학생이 지문 속 ①~⑤ 중 고르게 하세요.
+- 어법 문항은 후보가 지문 안에 이미 표시되는 경우, passage 안에 ①~⑤ 번호를 직접 넣고 choices는 빈 배열로 두세요. 중복 선택지나 '보기 없음' 선택지를 만들지 마세요. 실제 시험처럼 학생이 지문 속 ①~⑤ 중 고르게 하세요.
 - 단, 같은 지문에서 두 개 이상의 연계 문항을 낼 경우에는 지문 번호 표시가 다른 문항 풀이를 방해하지 않도록, 해당 어법 문항에서만 별도 짧은 문장을 passage로 제시하세요.
 - 어법 문항은 반드시 정답이 되는 어색한 표현이 정확히 1개 있어야 하며 나머지 4개는 문법적으로 자연스러워야 합니다.
 - 선택지에 ⓐ~ⓔ 표식을 반복해서 붙이지 마세요. 선택지 밑줄은 발문에서 '밑줄 친 선택지/표현/부분'을 직접 비교하도록 요구하는 경우에만 사용하세요.
@@ -1185,7 +1186,8 @@ function buildGenerationSections(total, sub){
     '강/잉어·to부정사 의미상 주어',
     '대나무·연꽃·despite',
     '교육적 의미·remind A of B',
-    '종합 고난도·삽입/순서/요약'
+    '종합 고난도·삽입/순서/요약',
+    '최종 종합·대화완성/어법변형'
   ];
   const sections=[];
   let remaining=total;
@@ -1282,11 +1284,13 @@ function isInlineMarkerQuestion(q){
   const stem=String(q?.stem||'');
   const passage=String(q?.passage||'');
   const choices=Array.isArray(q?.choices)?q.choices:[];
-  const asksGrammarPart=/(어법상|문법적으로|문법상).*(어색|틀린|올바르|맞는)|어색한\s*부분/.test(stem);
-  const markerCount=(passage.match(/[ⓐⓑⓒⓓⓔ]/g)||[]).length;
+  const asksGrammarPart=/(어법상|문법적으로|문법상).*(어색|틀린|올바르|맞는)|어색한\s*부분|문법적으로\s*올바른/.test(stem);
+  const alphaMarkerCount=(passage.match(/[ⓐⓑⓒⓓⓔ]/g)||[]).length;
+  const numberMarkerCount=((passage+' '+stem).match(/[①②③④⑤]/g)||[]).length;
   const choiceMarkerCount=choices.filter(c=>/^\s*(?:[①②③④⑤]\s*)?[ⓐⓑⓒⓓⓔ]/.test(String(c||''))).length;
-  // 지문 안에 ⓐ~ⓔ 후보가 이미 표시되어 있고, 선택지가 단순 매칭용이면 실제 내신식으로 지문 속 번호만 남긴다.
-  return asksGrammarPart && markerCount>=3 && choiceMarkerCount>=3;
+  const allNoRealChoices=choices.length>0 && choices.every(c=>/^\s*(보기\s*없음|선택지\s*\d*)?\s*$/.test(String(c||'')));
+  // 지문 안에 후보 번호가 이미 있고, 선택지가 단순 중복/빈 보기이면 실제 내신식으로 지문 속 번호만 남긴다.
+  return asksGrammarPart && ((alphaMarkerCount>=3 && choiceMarkerCount>=3) || (numberMarkerCount>=3 && allNoRealChoices));
 }
 function choiceNum(i){return ['①','②','③','④','⑤'][i] || String(i+1);}
 function normalizeAnswer(ans){
@@ -1481,7 +1485,7 @@ function renderSheet(){
     if(total<=8) return total;        // 8문항 이하는 1페이지 우선
     if(total<=12) return Math.ceil(total/2); // 12문항은 6+6 균형
     if(total<=20) return 7;           // 20문항은 7문항 안팎으로 분산
-    return 6;                         // 30문항은 6문항씩 안정 분산
+    return 8;                         // 30문항은 8문항 안팎으로 분산하여 빈 공간을 줄임
   }
   const targetPerPage=getPageTarget(questions.length);
   for(let start=0; start<questions.length; start+=targetPerPage){
