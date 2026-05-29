@@ -3,9 +3,49 @@
     "3": {
       "2025_2": {
         "school": "미사강변중학교",
+        "alias": [
+          "미강중학교",
+          "미강중"
+        ],
         "grade": 3,
         "exam": "2025_2",
-        "note": "v8 stable profile embedded in prompt"
+        "exam_label": "2025년 2학기 2차 기말고사",
+        "compact_profile": {
+          "core": "대화문 절차/조언 + 문화 설명문(Munjado) + 정보 설명문(Big data) + 지문 속 어법·어휘 판단 중심",
+          "must_use_topics": [
+            "Munjado/문자도와 유교적 덕목",
+            "Big data의 수집·분석·예측·활용",
+            "발표 전 조언 대화문",
+            "도서관 로봇/교통카드/전시회 같은 절차형 대화문"
+          ],
+          "avoid_topics": [
+            "camouflage",
+            "plastic pollution",
+            "social media generic reading",
+            "unrelated environmental essay"
+          ],
+          "question_types": [
+            "내용일치/불일치",
+            "제목/요지",
+            "빈칸",
+            "Q&A 짝짓기",
+            "지칭어",
+            "문맥상 어색한 어휘",
+            "ⓐ~ⓔ 어법",
+            "접속사/전치사",
+            "as 용법"
+          ],
+          "grammar_points": [
+            "가정법",
+            "though/despite",
+            "형용사/부사",
+            "동명사/부정사",
+            "as 용법",
+            "수동태",
+            "시제/조동사"
+          ],
+          "distractor_policy": "오답은 지문에 없는 엉뚱한 내용보다 대상·범위·목적·결과·순서·상징 의미 중 하나만 바꾼 함정형으로 구성"
+        }
       }
     }
   }
