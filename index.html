@@ -427,8 +427,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   <div class="sb-sec">
     <div class="sb-title">문항 수</div>
     <div class="qcount-grid">
-      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><span class="qc-val" id="q-total">8</span><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
-      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><span class="qc-val" id="q-obj">8</span><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>총 문항</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('total',-1)">−</button><span class="qc-val" id="q-total">30</span><button class="qc-btn" onclick="chQ('total',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
+      <div class="qcount-item"><label>객관식</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('obj',-1)">−</button><span class="qc-val" id="q-obj">30</span><button class="qc-btn" onclick="chQ('obj',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
       <div class="qcount-item"><label>서술형</label><div class="qcount-row"><button class="qc-btn" onclick="chQ('sub',-1)">−</button><span class="qc-val" id="q-sub">0</span><button class="qc-btn" onclick="chQ('sub',1)">+</button><span style="font-size:0.69rem;color:var(--muted)">문항</span></div></div>
       <div class="qcount-item" style="grid-column:1/-1;">
         <div class="type-detail-btn" onclick="toggleTypeDetail()">▸ 유형별 문항 수 세부 설정</div>
@@ -668,7 +668,7 @@ const REF_CELLS = [
   {key:'2023_2', label:'2023\n2학기', year:'2023', sem:'2'},
 ];
 
-let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:8,obj:8,sub:0};
+let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:30,obj:30,sub:0};
 let selectedRefs=new Set(); // 선택된 기출 키
 let questions=[],passages=[],typeConfig={},ansVisible=false,ratioValues={};
 
@@ -1002,6 +1002,41 @@ ${custom?'- 추가 요청: '+custom:''}${passageNote}
 }
 
 // ── API 호출 ──────────────────────────────────────
+function buildGenerationSections(total, sub){
+  const maxPerCall=6; // Vercel/Claude 안정성을 위한 1회 생성 상한
+  const sectionLabels=['대화문·세부내용','설명문·내용일치/제목','정보문·빈칸/어법','어법·어휘 변별','고난도 종합'];
+  const sections=[];
+  let remaining=total;
+  let start=1;
+  let idx=0;
+  while(remaining>0){
+    const count=Math.min(maxPerCall, remaining);
+    sections.push({
+      index:idx+1,
+      startNumber:start,
+      count,
+      label:sectionLabels[idx%sectionLabels.length]
+    });
+    remaining-=count;
+    start+=count;
+    idx++;
+  }
+  // 서술형은 마지막 섹션부터 배정
+  let subLeft=Math.max(0, sub||0);
+  for(let i=sections.length-1;i>=0;i--){
+    const take=Math.min(subLeft, sections[i].count);
+    sections[i].subjective=take;
+    sections[i].objective=sections[i].count-take;
+    subLeft-=take;
+  }
+  sections.forEach(sec=>{if(sec.subjective==null){sec.subjective=0;sec.objective=sec.count;}});
+  return sections;
+}
+function setProgressText(txt){
+  const el=document.getElementById('btn-txt');
+  if(el)el.textContent=txt;
+}
+
 async function generate(){
   const title=document.getElementById('cfg-title').value.trim();
   if(!title){showErr('시험지 명을 입력해주세요.');return;}
@@ -1011,25 +1046,45 @@ async function generate(){
   document.getElementById('ans-sheet').className='';
   document.getElementById('toolbar').className='toolbar';
   ansVisible=false;
+  questions=[];
+  const basePrompt=buildPrompt();
+  const sections=buildGenerationSections(state.total,state.sub);
   try{
-    const res=await fetch('/api/generate-exam',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:buildPrompt(), total:state.total, objective:state.obj, subjective:state.sub})
-    });
-    const raw=await res.text();
-    let data={};
-    try{data=raw?JSON.parse(raw):{};}catch(_){data={raw};}
-    if(!res.ok){
-      let msg=data.error||data.raw||'서버 API 오류';
-      if(typeof msg==='object')msg=JSON.stringify(msg);
-      throw new Error(String(msg).slice(0,500));
+    let all=[];
+    for(const sec of sections){
+      setProgressText(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 생성 중 (${sec.index}/${sections.length})`);
+      const res=await fetch('/api/generate-exam',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          prompt:basePrompt,
+          fullTotal:state.total,
+          total:sec.count,
+          objective:sec.objective,
+          subjective:sec.subjective,
+          sectionIndex:sec.index,
+          sectionTotal:sections.length,
+          startNumber:sec.startNumber,
+          sectionLabel:sec.label
+        })
+      });
+      const raw=await res.text();
+      let data={};
+      try{data=raw?JSON.parse(raw):{};}catch(_){data={raw};}
+      if(!res.ok){
+        let msg=data.error||data.raw||'서버 API 오류';
+        if(typeof msg==='object')msg=JSON.stringify(msg);
+        throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 생성 실패: ${String(msg).slice(0,500)}`);
+      }
+      let part=[];
+      if(Array.isArray(data.questions)) part=data.questions;
+      else if(typeof data.text==='string'){
+        const mm=data.text.match(/\[[\s\S]*\]/); if(!mm) throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 응답에서 문항 배열을 찾지 못했습니다.`);
+        part=JSON.parse(mm[0]);
+      } else throw new Error(`${sec.startNumber}~${sec.startNumber+sec.count-1}번 문항 데이터가 없습니다.`);
+      part=normalizeQuestions(part).slice(0,sec.count).map((q,i)=>({...q,number:sec.startNumber+i}));
+      all=all.concat(part);
     }
-    if(Array.isArray(data.questions)) questions=data.questions;
-    else if(typeof data.text==='string'){
-      const mm=data.text.match(/\[[\s\S]*\]/); if(!mm) throw new Error('Claude 응답에서 문항 배열을 찾지 못했습니다. 다시 생성해 주세요.');
-      questions=JSON.parse(mm[0]);
-    } else throw new Error('Claude가 문항 데이터를 반환하지 않았습니다. 다시 생성해 주세요.');
-    questions=normalizeQuestions(questions);
+    questions=normalizeQuestions(all);
     if(state.sub===0) questions=questions.filter(q=>q.format!=='서술형');
     questions=questions.slice(0,state.total).map((q,i)=>({...q,number:i+1}));
     if(!questions.length) throw new Error('생성된 문항이 없습니다. 다시 생성해 주세요.');
