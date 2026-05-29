@@ -18,6 +18,49 @@ function compactUserPrompt(prompt, maxChars = 4200) {
   return joined.length > maxChars ? joined.slice(0, maxChars) : joined;
 }
 
+function getMigangBlueprint({ fullTotal, sectionIndex, startNo, count, subjective }) {
+  const total = Number(fullTotal) || count;
+  const idx = Number(sectionIndex) || 1;
+  const endNo = startNo + count - 1;
+
+  if (total <= 8) {
+    if (idx === 1) {
+      return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 1번: Munjado/문자도 문화 설명문. 내용 불일치. 주제어: Chinese characters, Confucian virtues, filial piety, loyalty, trust, Joseon ordinary people. 왕실 전용/자연 풍경 전용 같은 명백한 소재 이탈은 1개 이하만 사용하고, 나머지는 대상·범위·목적을 살짝 바꾼 함정으로 구성.
+- 2번: 같은 Munjado 지문 기반 제목/요지. passage는 빈 문자열. 너무 넓은 제목, 너무 좁은 제목, 소재는 맞지만 결론이 다른 제목을 섞기.
+- 3번: Big data 정보 설명문. 빈칸 또는 내용일치. 주제어: collect, analyze, patterns, predict, recommend, decisions. 단순 IT 상식이 아니라 지문 흐름 근거로 풀리게 만들기.
+- 4번: 같은 Big data 지문 기반 어법/문맥어휘. passage는 빈 문자열. 앞 지문 핵심 문장에 ⓐ~ⓔ 또는 [u]밑줄[/u] 표시를 사용.`;
+    }
+    return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 5번: presentation을 앞둔 학생에게 조언하는 대화문. 내용일치. outline, practice from notes, deep breath, record/listen, main topic 중 2~3개를 포함.
+- 6번: 같은 대화문 기반 Q&A 짝짓기 또는 마지막 조언. passage는 빈 문자열. 단순 내용일치 반복 금지.
+- 7번: 연결어/전치사/문맥어휘 변별. though/despite/because of/if/unless/when 중 실제 문장 구조로 판단하게 만들기. 앞선 소재와 연결.
+- 8번: as 용법 또는 밑줄 어법 변별. '~할 때', '~로서', '~처럼', 'as...as'를 구분하게 하되 예문은 짧게.`;
+  }
+
+  const pattern = (idx - 1) % 5;
+  if (pattern === 0) return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 문화/설명문 묶음. Munjado, Korean folk painting, Confucian virtues, symbols in letters 중 하나의 지문으로 2문항 이상 연계.
+- 유형: 내용 불일치 + 제목/요지 + 지칭어/어휘 중 조합.
+- passage는 첫 문항에만, 후속 문항은 빈 문자열.`;
+  if (pattern === 1) return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 정보 설명문 묶음. Big data, technology, robot/library, recommendation/prediction 중 하나.
+- 유형: 빈칸 + 내용일치/불일치 + 어법/문맥어휘 중 조합.
+- 단순 일반상식 문제 금지. 지문 근거가 있어야 함.`;
+  if (pattern === 2) return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 대화문 묶음. presentation advice, exhibition choice, library robot instructions, transportation card procedure 중 하나.
+- 유형: 내용일치 + Q&A 짝짓기 + 흐름상 어색한 문장/마지막 조언 중 조합.
+- 대화문은 8~10줄 이내.`;
+  if (pattern === 3) return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 어법/어휘 변별 묶음. 앞선 소재와 연결된 짧은 지문 또는 대화문 활용.
+- 유형: ⓐ~ⓔ 어법상 어색한 것, 모두 고르기, 개수 세기, 접속사/전치사 구분.
+- 가정법, 형용사/부사, 동명사, though/despite, as 용법 중 1~2개 반영.`;
+  return `[v15 미강중3 강제 설계: ${startNo}~${endNo}번]
+- 고난도 종합 묶음. 일기/편지/설명문 중 하나.
+- 유형: 내용 불일치, 요지/속담, as 용법, 문맥어휘 의미관계 중 조합.
+- 함정 선택지는 지문 표현을 한 요소만 바꾼 형태로 구성.`;
+}
+
 function stripCodeFence(t) {
   return String(t || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 }
@@ -101,9 +144,14 @@ export default async function handler(req, res) {
     const requestedSubjective = Math.max(0, Math.min(requestedTotal, Number(subjective) || 0));
     const requestedObjective = requestedTotal - requestedSubjective;
     const startNo = Number(startNumber) || 1;
-    const essentialPrompt = compactUserPrompt(prompt);
+    const essentialPrompt = compactUserPrompt(prompt, 5200);
+    const blueprint = getMigangBlueprint({ fullTotal, sectionIndex, startNo, count: requestedTotal, subjective: requestedSubjective });
 
-    const stablePrompt = `${essentialPrompt}\n\n[이번 구간 생성 지시]\n전체 ${Number(fullTotal) || requestedTotal}문항 중 ${sectionIndex}/${sectionTotal}구간입니다.\n이번 구간 역할: ${sectionLabel}\n문항 번호: ${startNo}번부터 ${startNo + requestedTotal - 1}번까지\n정확히 ${requestedTotal}문항만 생성하세요. 객관식 ${requestedObjective}문항, 서술형 ${requestedSubjective}문항입니다.\n\n[품질 규칙]\n- passage는 구간당 최대 1개만 쓰세요. 후속 연계 문항은 passage를 빈 문자열로 두세요.\n- passage는 45~65단어, 대화문은 5~7줄 이내로 짧게 쓰세요.\n- 선택지는 객관식마다 정확히 5개, 각 선택지는 14단어 이내입니다.\n- explanation은 1문장만 쓰세요.\n- 서술형 0문항이면 서술형을 절대 만들지 마세요.\n\n[출력 형식]\n반드시 순수 JSON 배열만 출력하세요. 코드블록, 설명, 한국어 머리말을 절대 붙이지 마세요.\n각 객체 필드: number,type,subtype,format,difficulty,passage,stem,choices,answer,explanation,points\n객관식 answer는 1~5 숫자입니다.\n예시: [{"number":${startNo},"type":"내용일치","subtype":"불일치","format":"객관식","difficulty":"보통","passage":"...","stem":"위 글의 내용과 일치하지 않는 것은?","choices":["...","...","...","...","..."],"answer":1,"explanation":"...","points":4}]`;
+    const stablePrompt = `${essentialPrompt}
+
+${blueprint}\n\n[이번 구간 생성 지시]\n전체 ${Number(fullTotal) || requestedTotal}문항 중 ${sectionIndex}/${sectionTotal}구간입니다.\n이번 구간 역할: ${sectionLabel}\n문항 번호: ${startNo}번부터 ${startNo + requestedTotal - 1}번까지\n정확히 ${requestedTotal}문항만 생성하세요. 객관식 ${requestedObjective}문항, 서술형 ${requestedSubjective}문항입니다.\n\n[품질 규칙]\n- passage는 구간당 최대 2개까지 허용합니다. 단, 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.\n- passage는 65~95단어, 대화문은 7~10줄 이내로 짧게 쓰세요.\n- 선택지는 객관식마다 정확히 5개, 각 선택지는 16단어 이내입니다.
+- camouflage, plastic pollution, social media처럼 미강중3 프로필과 무관한 일반 독해 소재는 사용하지 마세요. 단, 사용자가 외부 지문으로 직접 입력한 경우는 예외입니다.
+- 선택지에는 그럴듯한 함정 2개 이상을 포함하세요.\n- explanation은 1문장만 쓰세요.\n- 서술형 0문항이면 서술형을 절대 만들지 마세요.\n\n[출력 형식]\n반드시 순수 JSON 배열만 출력하세요. 코드블록, 설명, 한국어 머리말을 절대 붙이지 마세요.\n각 객체 필드: number,type,subtype,format,difficulty,passage,stem,choices,answer,explanation,points\n객관식 answer는 1~5 숫자입니다.\n예시: [{"number":${startNo},"type":"내용일치","subtype":"불일치","format":"객관식","difficulty":"보통","passage":"...","stem":"위 글의 내용과 일치하지 않는 것은?","choices":["...","...","...","...","..."],"answer":1,"explanation":"...","points":4}]`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 38000);
