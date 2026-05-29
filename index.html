@@ -260,7 +260,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .q-wrap{
   break-inside:avoid;
   page-break-inside:avoid;
-  padding:5px 12px;
+  padding:8px 12px 9px;
+  margin-bottom:5px;
   border-bottom:1px solid #eef0f5;
   width:100%;
   vertical-align:top;
@@ -272,7 +273,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   display:flex;
   align-items:baseline;
   gap:6px;
-  margin-bottom:4px;
+  margin-bottom:5px;
 }
 .q-num{
   flex-shrink:0;
@@ -301,7 +302,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 /* 지문 */
 .q-passage{
   background:#f7f8fc;border-left:2.5px solid var(--blue);
-  padding:5px 8px;margin:3px 0 5px 23px;
+  padding:5px 8px;margin:4px 0 7px 23px;
   font-size:8.15pt;line-height:1.46;
   border-radius:0 3px 3px 0;color:#222;
   word-break:keep-all;
@@ -310,12 +311,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 
 /* v8: 출력 안정화/보기 표시 */
 .q-choice .q-cnum{font-family:var(--font-serif);font-weight:700;color:var(--navy);}
-.q-choice em,.q-passage em,.q-stem-text em{font-style:normal;text-decoration:underline;text-underline-offset:2px;font-weight:600;}
+.q-passage em,.q-stem-text em{font-style:normal;text-decoration:underline;text-underline-offset:2px;font-weight:600;}
+.q-choice em{font-style:normal;text-decoration:underline;text-underline-offset:2px;font-weight:600;}
 .q-passage .mark,.q-stem-text .mark{display:inline-block;font-size:8pt;font-weight:700;color:var(--accent);margin-right:2px;}
 
 /* 선택지 */
-.q-choices{display:flex;flex-direction:column;gap:1px;margin-left:24px;}
-.q-choice{display:flex;gap:5px;font-size:8.35pt;padding:1px 3px;border-radius:3px;line-height:1.35;word-break:keep-all;}
+.q-choices{display:flex;flex-direction:column;gap:2px;margin-left:24px;}
+.q-choice{display:flex;gap:5px;font-size:8.35pt;padding:2px 3px;border-radius:3px;line-height:1.4;word-break:keep-all;}
 .q-cnum{font-family:var(--font-mono);font-size:7.5pt;color:var(--muted);min-width:13px;padding-top:1px;flex-shrink:0;}
 
 /* 서술형 답란 */
@@ -1147,7 +1149,9 @@ ${ratioLines}
 - 중학교 내신 특성에 맞게 출제하되, 실제 기출의 지문 포인트와 오답 함정 방식을 우선 반영
 - ${state.sub===0?'서술형 0문항입니다. 서술형 문제와 답란을 만들지 마세요.':'서술형은 조건과 모범답안을 구체적으로 포함하세요.'}
 - 같은 지문 연계 문항은 첫 문항에만 passage를 넣고 후속 문항의 passage는 빈 문자열로 두세요.
+- 첫 문항처럼 발문 아래에 passage가 함께 제시되는 경우에는 발문에서 "위 글/위 대화/위 문장" 대신 "다음 글/다음 대화/다음 문장" 표현을 우선 사용하세요. 후속 연계 문항처럼 passage가 바로 위에 이미 제시된 경우에만 "위 글/위 대화" 표현을 사용하세요.
 - 어법 문항은 ⓐ~ⓔ 표식과 [u]밑줄[/u] 표시를 활용하세요. 단, 반드시 정답이 되는 어색한 표현이 정확히 1개 있어야 하며 나머지 4개는 문법적으로 자연스러워야 합니다.
+- 선택지 밑줄은 발문에서 '밑줄 친 선택지/표현/부분'을 직접 비교하도록 요구하는 경우에만 사용하세요. 일반 어법 문제에서는 passage나 stem에만 밑줄을 표시하고 선택지에는 밑줄을 넣지 마세요.
 - A4 출력 안정성을 위해 passage는 70~110단어, 선택지는 각 18단어 이내로 간결하게 작성하세요.
 ${textbookSourceNote}
 ${getMigang3V7Guide()}
@@ -1205,6 +1209,41 @@ function renderText(s){
   out=out.replace(/__([^_]{1,80})__/g,'<em>$1</em>');
   out=out.replace(/([ⓐⓑⓒⓓⓔ])/g,'<span class="mark">$1</span>');
   return out.replace(/\n/g,'<br>');
+}
+
+function renderChoiceText(s, allowUnderline=false){
+  let raw=String(s ?? '');
+  let out=escapeHtml(raw);
+  if(allowUnderline){
+    out=out.replace(/\[u\]([\s\S]*?)\[\/u\]/g,'<em>$1</em>');
+    out=out.replace(/__([^_]{1,80})__/g,'<em>$1</em>');
+  }else{
+    out=out.replace(/\[u\]([\s\S]*?)\[\/u\]/g,'$1');
+    out=out.replace(/__([^_]{1,80})__/g,'$1');
+  }
+  out=out.replace(/([ⓐⓑⓒⓓⓔ])/g,'<span class="mark">$1</span>');
+  return out.replace(/\n/g,'<br>');
+}
+function shouldAllowChoiceUnderline(q){
+  const stem=String(q?.stem||'');
+  const type=String(q?.type||'')+' '+String(q?.subtype||'');
+  const choices=Array.isArray(q?.choices)?q.choices:[];
+  const underlineCount=choices.filter(c=>/\[u\]|\[\/u\]|__/.test(String(c||''))).length;
+  const explicitUnderlineAsk=/(밑줄|밑줄 친|underlined|underline)/i.test(stem+type);
+  const asksChoiceComparison=/(선택지|보기|표현|부분|문장|어법|의미|쓰임|용법|어색|올바른|틀린)/.test(stem+type);
+  // 선택지 밑줄은 문제 의도가 명확할 때만 허용한다.
+  // 특히 한 선택지에만 우연히 밑줄이 들어간 경우는 오류 가능성이 높으므로 제거한다.
+  return explicitUnderlineAsk && asksChoiceComparison && underlineCount>=2;
+}
+function adjustReferenceLabel(stem, showPassage){
+  let t=String(stem||'');
+  if(showPassage){
+    t=t.replace(/위\s*글/g,'다음 글')
+       .replace(/위\s*대화/g,'다음 대화')
+       .replace(/위\s*문장/g,'다음 문장')
+       .replace(/윗글/g,'다음 글');
+  }
+  return t;
 }
 function choiceNum(i){return ['①','②','③','④','⑤'][i] || String(i+1);}
 function normalizeAnswer(ans){
@@ -1360,16 +1399,17 @@ function renderSheet(){
     const passageNorm=(q.passage||'').replace(/\s+/g,' ').trim();
     const showPassage=!!passageNorm && passageNorm!==lastPassageNorm;
     if(passageNorm)lastPassageNorm=passageNorm;
+    const stemText=adjustReferenceLabel(q.stem, showPassage);
     const choicesHtml=isSubj
       ?`<div class="subj-ans"><span class="subj-ans-label">답:</span></div>`
       :(q.choices||[]).slice(0,5).map((c,ci)=>{
           const txt=String(c||'').replace(/^[①②③④⑤]\s*/,'');
-          return `<div class="q-choice"><span class="q-cnum">${choiceNum(ci)}</span><span>${renderText(txt)}</span></div>`;
+          return `<div class="q-choice"><span class="q-cnum">${choiceNum(ci)}</span><span>${renderChoiceText(txt, shouldAllowChoiceUnderline(q))}</span></div>`;
         }).join('');
     el.innerHTML=`
       <div class="q-row">
         <span class="q-num${isSubj?' q-num-subj':''}">${q.number}</span>
-        <span class="q-stem-text">${renderText(q.stem)}<sup class="q-meta${isSubj?' q-meta-subj':''}">${escapeHtml(typeLabel)}${escapeHtml(diffLabel)} ${escapeHtml(ptsLabel)}</sup></span>
+        <span class="q-stem-text">${renderText(stemText)}<sup class="q-meta${isSubj?' q-meta-subj':''}">${escapeHtml(typeLabel)}${escapeHtml(diffLabel)} ${escapeHtml(ptsLabel)}</sup></span>
       </div>
       ${showPassage?`<div class="q-passage">${renderText(q.passage)}</div>`:''}
       <div class="q-choices">${choicesHtml}</div>`;
