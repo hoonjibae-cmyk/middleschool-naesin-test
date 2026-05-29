@@ -1037,6 +1037,90 @@ function setProgressText(txt){
   if(el)el.textContent=txt;
 }
 
+
+
+// ── 생성 결과 후처리/렌더링 헬퍼 ─────────────────────────────
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function renderText(s){
+  let out=escapeHtml(s);
+  out=out.replace(/\[u\]([\s\S]*?)\[\/u\]/g,'<em>$1</em>');
+  out=out.replace(/__([^_]{1,80})__/g,'<em>$1</em>');
+  out=out.replace(/([ⓐⓑⓒⓓⓔ])/g,'<span class="mark">$1</span>');
+  return out.replace(/\n/g,'<br>');
+}
+function choiceNum(i){return ['①','②','③','④','⑤'][i] || String(i+1);}
+function normalizeAnswer(ans){
+  if(typeof ans==='number')return Math.max(1,Math.min(5,ans));
+  const s=String(ans ?? '').trim();
+  const circ={'①':1,'②':2,'③':3,'④':4,'⑤':5};
+  for(const [k,v] of Object.entries(circ)){if(s.includes(k))return v;}
+  const m=s.match(/[1-5]/); return m?Number(m[0]):s;
+}
+function splitStemWithEmbeddedPassage(stem){
+  const text=String(stem||'').trim();
+  if(text.length<240)return null;
+  const qpos=text.search(/[?？]/);
+  if(qpos<10 || qpos>180)return null;
+  const prefix=text.slice(0,qpos+1).trim();
+  const body=text.slice(qpos+1).trim();
+  if(body.length<140)return null;
+  return {prefix,body};
+}
+function tokenSet(str){
+  return new Set(String(str||'').toLowerCase().replace(/[^a-z0-9가-힣\s]/g,' ').split(/\s+/).filter(w=>w.length>3));
+}
+function jaccard(a,b){
+  const A=tokenSet(a),B=tokenSet(b); if(!A.size||!B.size)return 0;
+  let inter=0; A.forEach(x=>{if(B.has(x))inter++;});
+  return inter/(A.size+B.size-inter);
+}
+function normalizeQuestions(qs){
+  if(!Array.isArray(qs))return [];
+  const out=qs.map((raw,idx)=>{
+    const q={...(raw||{})};
+    q.number=Number(q.number)||idx+1;
+    q.type=String(q.type||'기타');
+    q.subtype=String(q.subtype||'');
+    q.format=q.format==='서술형'?'서술형':'객관식';
+    q.difficulty=String(q.difficulty||'보통');
+    q.passage=String(q.passage||'').trim();
+    q.stem=String(q.stem||'').trim() || '다음 물음에 답하시오.';
+    q.choices=Array.isArray(q.choices)?q.choices.map(c=>String(c||'').trim()).filter(Boolean):[];
+    if(q.format==='객관식'){
+      q.choices=q.choices.slice(0,5);
+      while(q.choices.length<5)q.choices.push('보기 없음');
+      q.answer=normalizeAnswer(q.answer);
+      if(typeof q.answer!=='number')q.answer=1;
+    }else{
+      q.choices=[];
+      q.answer=String(q.answer||'모범답안 없음');
+    }
+    q.explanation=String(q.explanation||'정답 근거를 확인하세요.');
+    q.points=Number(q.points)|| (q.difficulty.includes('어려')||q.difficulty.includes('킬러')?5:4);
+    return q;
+  });
+  // Claude가 후속 문항 stem 안에 지문 전체를 다시 넣은 경우 정리
+  for(let i=0;i<out.length;i++){
+    const split=(!out[i].passage && out[i].stem)?splitStemWithEmbeddedPassage(out[i].stem):null;
+    if(split){
+      out[i].stem=split.prefix;
+      let merged=false;
+      for(let j=i-1;j>=Math.max(0,i-2);j--){
+        if(out[j].passage && jaccard(out[j].passage,split.body)>0.2){
+          // ⓐ~ⓔ 표시가 있는 더 상세한 passage를 앞 문항에 반영
+          out[j].passage=split.body;
+          merged=true;
+          break;
+        }
+      }
+      if(!merged)out[i].passage=split.body;
+    }
+  }
+  return out;
+}
+
 async function generate(){
   const title=document.getElementById('cfg-title').value.trim();
   if(!title){showErr('시험지 명을 입력해주세요.');return;}
