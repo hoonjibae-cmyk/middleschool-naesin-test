@@ -53,6 +53,16 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .sb-title{font-family:var(--font-mono);font-size:0.59rem;letter-spacing:0.1em;color:var(--blue);text-transform:uppercase;font-weight:500;margin-bottom:9px;display:flex;align-items:center;gap:5px;}
 .sb-title::before{content:'';width:3px;height:8px;background:var(--blue);border-radius:2px;display:inline-block;}
 
+
+/* 저장 교과서 자료 선택 */
+.source-panel{background:#f8f9fc;border:1px solid var(--border);border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:6px;}
+.source-head{font-size:0.76rem;font-weight:700;color:var(--navy);}
+.source-note{font-size:0.64rem;color:var(--muted);line-height:1.5;}
+.source-item{display:flex;gap:6px;align-items:flex-start;font-size:0.72rem;line-height:1.45;background:white;border:1px solid #e1e5ef;border-radius:4px;padding:5px 6px;}
+.source-item input{margin-top:2px;accent-color:var(--navy);}
+.source-meta{font-size:0.6rem;color:var(--muted);}
+.source-empty{font-size:0.7rem;color:var(--muted);background:#fff8e8;border:1px solid #efdca9;border-radius:4px;padding:6px 8px;line-height:1.5;}
+
 /* 사이드바 컴포넌트 */
 .school-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
 .school-card{border:1.5px solid var(--border);border-radius:6px;padding:7px 6px;cursor:pointer;text-align:center;background:white;transition:all 0.15s;}
@@ -390,6 +400,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
     <div class="tb-panel" id="tb-panel"></div>
   </div>
   <div class="sb-sec">
+    <div class="sb-title">저장 교과서 자료</div>
+    <div class="source-panel" id="textbook-source-panel">
+      <div class="source-empty">등록된 교과서 본문을 불러오는 중입니다.</div>
+    </div>
+  </div>
+  <div class="sb-sec">
     <div class="sb-title">출제 비율 설정</div>
     <div style="font-size:0.68rem;color:var(--muted);margin-bottom:8px;">기본값: 주교재 100% / 외부지문 비율 입력 시 주교재 자동 조절</div>
     <div id="ratio-rows"></div>
@@ -588,9 +604,10 @@ function showChangeKey(){
   document.getElementById('setup-apikey').value='';
 }
 // 서버 API 버전: Claude API Key는 Vercel 환경변수에 저장합니다.
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('lock-screen').style.display='none';
   document.getElementById('app').style.display='block';
+  await loadTextbookUnits();
   init();
   syncQDisplay();
 });
@@ -679,12 +696,15 @@ const REF_CELLS = [
 let state={school:'misagang',grade:1,diff:3,diffMode:'uniform',total:30,obj:30,sub:0};
 let selectedRefs=new Set(); // 선택된 기출 키
 let questions=[],passages=[],typeConfig={},ansVisible=false,ratioValues={};
+let textbookUnits={};
+let selectedTextbookSourceIds=new Set();
 
 function init(){
   TYPE_LIST.forEach(t=>typeConfig[t]=0);
   renderTypeRows();
   renderTbPanel();
   renderRefGrid();
+  renderTextbookSourcePanel();
 }
 
 // ── 기출 그리드 ───────────────────────────────────
@@ -756,6 +776,64 @@ function toggleRef(cell, key, avail){
     const k=el.dataset.key;
     if(k) el.classList.toggle('active', selectedRefs.has(k));
   });
+}
+
+
+// ── 저장 교과서 자료 ───────────────────────────────
+async function loadTextbookUnits(){
+  try{
+    const res=await fetch('./data/textbook-units.json',{cache:'no-store'});
+    textbookUnits=res.ok?await res.json():{};
+  }catch(e){console.warn('textbook-units load failed',e);textbookUnits={};}
+}
+function getAvailableTextbookSources(){
+  const semKey='2026_1'; // v17 prototype: 2026년 1학기 자료 우선
+  const lessonMap=textbookUnits?.[state.school]?.[String(state.grade)]?.[semKey]?.main?.lessons||{};
+  return Object.values(lessonMap).flatMap(lesson=>(lesson.sources||[]).map(src=>({
+    ...src,
+    lesson_no:lesson.lesson_no,
+    lesson_title:lesson.lesson_title,
+    reading_title:lesson.reading_title,
+    source_pdf:lesson.source_pdf
+  })));
+}
+function renderTextbookSourcePanel(){
+  const panel=document.getElementById('textbook-source-panel');
+  if(!panel)return;
+  const sources=getAvailableTextbookSources();
+  selectedTextbookSourceIds.clear();
+  if(!sources.length){
+    panel.innerHTML='<div class="source-empty">등록된 교과서 자료가 없습니다.<br>주교재 100% 출제를 하려면 관리자용 교과서 PDF 등록이 필요합니다.</div>';
+    return;
+  }
+  panel.innerHTML=`<div class="source-head">동아 윤정미 Lesson ${sources[0].lesson_no} · 저장 자료 ${sources.length}개</div>
+    <div class="source-note">체크된 본문/대화문만 주교재 출제 소스로 사용됩니다. 외부지문 0%일 때는 아래 자료 밖의 새 지문 창작을 금지합니다.</div>`;
+  sources.forEach((src,idx)=>{
+    selectedTextbookSourceIds.add(src.id); // 기본 전체 선택
+    const item=document.createElement('label');
+    item.className='source-item';
+    item.innerHTML=`<input type="checkbox" checked onchange="toggleTextbookSource('${src.id}',this.checked)">
+      <div><div>${src.label}</div><div class="source-meta">${src.type} · ${(src.keywords||[]).slice(0,4).join(', ')}</div></div>`;
+    panel.appendChild(item);
+  });
+}
+function toggleTextbookSource(id,checked){
+  if(checked)selectedTextbookSourceIds.add(id);else selectedTextbookSourceIds.delete(id);
+}
+function getSelectedTextbookSources(){
+  const sources=getAvailableTextbookSources();
+  return sources.filter(s=>selectedTextbookSourceIds.has(s.id));
+}
+function buildTextbookSourcePrompt(){
+  const selected=getSelectedTextbookSources();
+  const mainRatio=ratioValues[getPrimaryBookKey()]||0;
+  const externalRatio=ratioValues.external||0;
+  if(mainRatio>0 && !selected.length){
+    return `\n[저장 교과서 자료]\n- 선택된 저장 교과서 본문이 없습니다. 주교재 ${mainRatio}% 출제를 위해서는 본문 등록/선택이 필요합니다. 임의 교과서 지문 창작 금지.`;
+  }
+  if(!selected.length)return '';
+  const blocks=selected.map((s,i)=>`【교과서 소스 ${i+1}: ${s.label}】\n- 유형: ${s.type}\n- 제목: ${s.title}\n- 핵심 문법: ${(s.grammar||[]).join(', ')}\n- 키워드: ${(s.keywords||[]).join(', ')}\n- 원문:\n${s.text}`).join('\n\n');
+  return `\n[저장 교과서 자료 — 주교재 출제 원문]\n- 아래 자료는 관리자 등록 교과서 유닛 자료에서 추출한 실제 시험범위 소스입니다.\n- 주교재 비율 ${mainRatio}%에 해당하는 문항은 반드시 아래 원문/대화문 안에서만 변형하세요.\n- 외부지문 비율은 ${externalRatio}%입니다. 외부지문이 0%이면 아래에 없는 Kimchi, Tea Ceremony, Plastic, Social Media 등 새 소재를 만들지 마세요.\n${blocks}`;
 }
 
 // ── 교과서 패널 ───────────────────────────────────
@@ -846,13 +924,13 @@ function selectSchool(el){
   if(el.classList.contains('disabled'))return;
   document.querySelectorAll('.school-card').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');state.school=el.dataset.school;
-  renderRefGrid();renderTbPanel();renderTypeRows();
+  renderRefGrid();renderTbPanel();renderTextbookSourcePanel();renderTypeRows();
 }
 function selectGrade(el){
   if(el.classList.contains('disabled'))return;
   document.querySelectorAll('.grade-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');state.grade=parseInt(el.dataset.grade);
-  renderRefGrid();renderTbPanel();
+  renderRefGrid();renderTbPanel();renderTextbookSourcePanel();
 }
 function selectDiff(el){
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
@@ -974,6 +1052,7 @@ function getMigang3V7Guide(){
 - 제목/요지: 정답만 자연스럽고 나머지가 엉뚱한 구조 금지. 너무 넓은 제목, 너무 좁은 제목, 소재는 맞지만 결론이 다른 제목을 반드시 섞는다.
 - 어법: 독립 문법 예문을 만들지 말고, 앞 지문의 핵심 문장을 가져와 한두 표현만 변형한다. 품사·수일치·시제·수동태·준동사·접속사/전치사·as 용법 중 하나가 정답 근거가 되게 한다.
 - 대화문: A/B 표기보다 Sora/Jake, Jisoo/Minho 같은 인물명을 사용한다. 단순 내용일치 외에 Q&A 짝짓기, 마지막 조언, 화자의 다음 행동, 흐름상 어색한 문장을 섞는다.
+- 저장 교과서 자료가 제공된 경우, Munjado 본문과 등록 대화문을 반드시 저장 원문을 바탕으로 출제한다. 원문에 없는 Big data, Kimchi, Tea Ceremony, Plastic, Social Media 같은 새 소재를 만들지 않는다.
 - 지면 제한: 2쪽 안에 들어오도록 설명문은 65~95단어, 대화문은 7~10줄 이내, 선택지는 각 16단어 이내로 짧게 쓴다. camouflage/plastic/social media 같은 일반 독해 소재로 이탈하지 않는다.
 - 같은 지문 연계 문항은 첫 문항에만 passage를 넣고 후속 문항 passage는 빈 문자열로 둔다.
 - 서술형 0문항이면 서술형과 빈 답란을 절대 생성하지 않는다.`;
@@ -1027,6 +1106,7 @@ function buildPrompt(){
   const typeCounts=Object.entries(typeConfig).filter(([,v])=>v>0);
   const typeDesc=typeCounts.length>0?typeCounts.map(([t,v])=>`${t} ${v}문항`).join(', '):TYPE_LIST.join(', ')+' 골고루';
   const passageNote=passages.length>0?'\n\n[외부 지문]\n'+passages.map((p,i)=>`【지문 ${i+1}】\n${p}`).join('\n\n'):'';
+  const textbookSourceNote=buildTextbookSourcePrompt();
 
   return `당신은 한국 중학교 영어 내신 시험 출제 전문가입니다.
 
@@ -1049,6 +1129,7 @@ ${ratioLines}
 - ${state.sub===0?'서술형 0문항입니다. 서술형 문제와 답란을 만들지 마세요.':'서술형은 조건과 모범답안을 구체적으로 포함하세요.'}
 - 같은 지문 연계 문항은 첫 문항에만 passage를 넣고 후속 문항의 passage는 빈 문자열로 두세요.
 - 어법 문항은 ⓐ~ⓔ 표식과 [u]밑줄[/u] 표시를 활용하세요.
+${textbookSourceNote}
 ${getMigang3V7Guide()}
 ${custom?'- 추가 요청: '+custom:''}${passageNote}
 
@@ -1059,7 +1140,7 @@ ${custom?'- 추가 요청: '+custom:''}${passageNote}
 // ── API 호출 ──────────────────────────────────────
 function buildGenerationSections(total, sub){
   const maxPerCall=4; // 안정성을 위한 1회 생성 상한: 30문항은 여러 구간으로 분할
-  const sectionLabels=['1~4번: Munjado 2문항 + Big data 2문항','5~8번: 발표 조언 대화문 2문항 + 연결어/as 2문항','문화설명문·내용일치/제목','정보문·빈칸/어법','대화문·Q&A','어법·어휘 변별','고난도 종합'];
+  const sectionLabels=['교과서 본문 1~2문항 + 문법/어휘','교과서 본문 연계 + 대화문','문화설명문·내용일치/제목','교과서 본문·빈칸/어법','대화문·Q&A','어법·어휘 변별','고난도 종합'];
   const sections=[];
   let remaining=total;
   let start=1;
