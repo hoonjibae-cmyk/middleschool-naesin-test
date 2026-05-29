@@ -1,0 +1,175 @@
+{
+  "misagang": {
+    "3": {
+      "2026_1": {
+        "main": {
+          "publisher": "동아",
+          "author": "윤정미",
+          "book": "동아 영어 3 (윤정미)",
+          "lessons": {
+            "lesson8": {
+              "lesson_no": 8,
+              "lesson_title": "The Joseon Dynasty Through Paintings",
+              "reading_title": "Munjado, a Window into the Joseon Dynasty",
+              "source_pdf": "2021년_중3_동아(윤정미)_8과_[01]내용정리_OK.pdf",
+              "study_points": [
+                "선호 표현하기",
+                "의견 표현하기",
+                "to부정사의 의미상 주어",
+                "가정법 과거"
+              ],
+              "sources": [
+                {
+                  "id": "L8_reading_01",
+                  "type": "reading",
+                  "label": "본문 1 · 문자도 정의/여덟 한자",
+                  "title": "Munjado definition and eight characters",
+                  "text": "Look at the painting on the right. Do you see the Chinese character, hyo? Do you also see a carp, a geomungo, and a fan? This kind of painting is called Munjado, and it is a type of folk painting that was popular in the late Joseon dynasty. In Munjado, there is usually a Chinese character with some animals or objects. One of eight Chinese characters appears in Munjado. They are hyo, je, chung, sin, ye, ui, yeom, and chi, and they represent the values that were important to people of the Joseon dynasty.",
+                  "grammar": [
+                    "수동태 A be called B",
+                    "주격 관계대명사 that",
+                    "One of + 복수명사 + 단수동사",
+                    "there is + 단수명사"
+                  ],
+                  "keywords": [
+                    "Munjado",
+                    "Chinese character",
+                    "Joseon dynasty",
+                    "Confucian values",
+                    "hyo",
+                    "chung",
+                    "ui"
+                  ]
+                },
+                {
+                  "id": "L8_reading_02",
+                  "type": "reading",
+                  "label": "본문 2 · 효와 잉어 이야기/가정법",
+                  "title": "Carp and filial piety story",
+                  "text": "The animals or objects in Munjado are not just decorations. They often are symbolic. For example, carp in the paintings of hyo symbolize respect for parents because of an old story. The story goes as follows. Once upon a time, a man lived with his old mother. One winter, the man's mother became ill and couldn't eat anything. On one very cold day, the mother said to the man, 'It would be wonderful if I could eat fresh fish.'",
+                  "grammar": [
+                    "수일치",
+                    "because of + 명사구",
+                    "go as follows",
+                    "가정법 과거",
+                    "become + 형용사"
+                  ],
+                  "keywords": [
+                    "symbolic",
+                    "carp",
+                    "respect for parents",
+                    "old mother",
+                    "fresh fish",
+                    "subjunctive"
+                  ]
+                },
+                {
+                  "id": "L8_reading_03",
+                  "type": "reading",
+                  "label": "본문 3 · 강/잉어/to부정사 의미상 주어",
+                  "title": "The man catches fish for his mother",
+                  "text": "The man went out to the river, but it was completely frozen. It was impossible for him to catch any fish. The man was so disappointed that he cried out to the sky, 'What should I do? Please help me.' Then the ice melted, and three carp suddenly came out of the water. The man went back home and cooked the fish for his mother. Then his mother got well.",
+                  "grammar": [
+                    "It is 형용사 for 목적격 to부정사",
+                    "to부정사의 의미상 주어",
+                    "so 형용사 that",
+                    "fish 단복수 동일"
+                  ],
+                  "keywords": [
+                    "frozen river",
+                    "impossible",
+                    "for him to catch",
+                    "three carp",
+                    "mother got well"
+                  ]
+                },
+                {
+                  "id": "L8_reading_04",
+                  "type": "reading",
+                  "label": "본문 4 · 대나무/연꽃/충·의",
+                  "title": "Bamboo and lotus as symbols",
+                  "text": "There are other examples of symbolic objects in Munjado. They are bamboo in the paintings of the character chung and lotus flowers in the paintings of ui. Bamboo does not bend. It stays green in all kinds of weather. For these reasons, bamboo came to symbolize loyalty to the king. In the case of lotus flowers, they grow in muddy ponds but still bloom beautifully. They thus became a symbol of a person's will to fight for justice despite difficulties.",
+                  "grammar": [
+                    "stay + 형용사",
+                    "come to부정사",
+                    "In the case of",
+                    "despite + 명사구",
+                    "to부정사의 형용사적 용법"
+                  ],
+                  "keywords": [
+                    "bamboo",
+                    "loyalty",
+                    "lotus flowers",
+                    "justice",
+                    "despite difficulties"
+                  ]
+                },
+                {
+                  "id": "L8_reading_05",
+                  "type": "reading",
+                  "label": "본문 5 · 문자도의 교육적 의미",
+                  "title": "Munjado as a study tool",
+                  "text": "Munjado was much more than a painting to people of the Joseon dynasty. It reminded them of important values that greatly influenced their behaviors and attitudes. In particular, for children, Munjado was a study tool. Through it, children in the Joseon dynasty could learn the importance of harmony in family and society.",
+                  "grammar": [
+                    "much 비교급 강조",
+                    "remind A of B",
+                    "주격 관계대명사 that",
+                    "could + 동사원형"
+                  ],
+                  "keywords": [
+                    "more than a painting",
+                    "important values",
+                    "behaviors and attitudes",
+                    "study tool",
+                    "harmony"
+                  ]
+                },
+                {
+                  "id": "L8_dialogue_01",
+                  "type": "dialogue",
+                  "label": "대화문 1 · 고양이 그림 선호",
+                  "title": "Preference for paintings of cats",
+                  "text": "G: Minho, look at these two paintings of cats here. Aren't they great?\nB: Yes, they are.\nG: They both are good, but I like the one on the left more. How about you?\nB: I prefer the one on the right. It seems to me that the cat in it is cuter. I also like the bird in it.",
+                  "grammar": [
+                    "부정의문문",
+                    "one 부정대명사",
+                    "I prefer",
+                    "It seems to me that",
+                    "How about you?"
+                  ],
+                  "keywords": [
+                    "prefer",
+                    "painting",
+                    "opinion",
+                    "one on the right"
+                  ]
+                },
+                {
+                  "id": "L8_dialogue_02",
+                  "type": "dialogue",
+                  "label": "대화문 2 · 탈 전시회/탈춤 공연",
+                  "title": "Korean mask exhibition conversation",
+                  "text": "Somi: We have two exhibitions to visit. Which one would you like to go to, Eric?\nEric: I'd like to see the Korean mask exhibition. Is that all right, Somi?\nSomi: Sure. I think the mask exhibition will be much more fun.\nEric: Really?\nSomi: Yes. There is not only an exhibition but also a mask dance performance at 4 and 6.\nEric: That sounds great! I've never watched a mask dance before.\nSomi: I saw one once, and it was amazing. I'm sure you'll enjoy it.\nEric: It's already 4:30, so let's go to the 6 o'clock show.\nSomi: Good idea. Let's look around the exhibition first.",
+                  "grammar": [
+                    "Which one would you like to",
+                    "much 비교급 강조",
+                    "not only A but also B",
+                    "현재완료 경험",
+                    "I'm sure that"
+                  ],
+                  "keywords": [
+                    "exhibition",
+                    "Korean mask",
+                    "mask dance",
+                    "preference",
+                    "schedule"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
