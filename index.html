@@ -99,7 +99,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .tb-range-input::placeholder{color:#bbb;}
 .tb-divider{border:none;border-top:1px dashed var(--border);}
 .tb-none{font-size:0.76rem;color:var(--muted);font-style:italic;padding:4px 0;}
-.ratio-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.ratio-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
 .ratio-row:last-child{margin-bottom:0;}
 .ratio-label{font-size:0.73rem;flex:0 0 100px;line-height:1.3;}
 .ratio-label .ratio-sub{font-size:0.6rem;color:var(--muted);}
@@ -241,18 +241,18 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   break-after:page;
   page-break-after:always;
   border-bottom:1px solid #dde3f0;
-  height:272mm;
-  overflow:hidden;
+  min-height:258mm;
+  overflow:visible;
 }
-.q-page.first-page{height:228mm;}
+.q-page.first-page{min-height:228mm;}
 .q-page:last-child{break-after:auto;page-break-after:auto;border-bottom:none;}
 .q-col{
   display:flex;
   flex-direction:column;
   align-items:stretch;
   min-width:0;
-  height:100%;
-  overflow:hidden;
+  min-height:100%;
+  overflow:visible;
 }
 .q-col.right{border-left:1px solid #dde3f0;}
 
@@ -260,7 +260,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .q-wrap{
   break-inside:avoid;
   page-break-inside:avoid;
-  padding:6px 13px;
+  padding:5px 12px;
   border-bottom:1px solid #eef0f5;
   width:100%;
   vertical-align:top;
@@ -272,7 +272,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   display:flex;
   align-items:baseline;
   gap:6px;
-  margin-bottom:5px;
+  margin-bottom:4px;
 }
 .q-num{
   flex-shrink:0;
@@ -285,8 +285,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 }
 .q-num-subj{background:var(--accent);}
 .q-stem-text{
-  flex:1;font-size:8.9pt;font-weight:600;
-  line-height:1.32;color:var(--ink);
+  flex:1;font-size:8.7pt;font-weight:600;
+  line-height:1.28;color:var(--ink);
   word-break:keep-all;
 }
 /* 위첨자: 유형·난이도·배점 */
@@ -301,8 +301,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 /* 지문 */
 .q-passage{
   background:#f7f8fc;border-left:2.5px solid var(--blue);
-  padding:6px 9px;margin:4px 0 6px 24px;
-  font-size:8.35pt;line-height:1.55;
+  padding:5px 8px;margin:3px 0 5px 23px;
+  font-size:8.15pt;line-height:1.46;
   border-radius:0 3px 3px 0;color:#222;
   word-break:keep-all;
 }
@@ -1382,35 +1382,37 @@ function renderSheet(){
     const left=document.createElement('div');left.className='q-col left';
     const right=document.createElement('div');right.className='q-col right';
     page.appendChild(left);page.appendChild(right);col.appendChild(page);
-    return {page,left,right,current:left};
+    return {page,left,right};
   };
 
-  let pg=createPage();
-  const tryAppend=(target,el)=>{
-    target.appendChild(el);
-    const ok=target.scrollHeight<=target.clientHeight+2;
-    if(!ok)target.removeChild(el);
-    return ok;
-  };
+  // v20: 문항 누락 방지 + 페이지 균형 배치
+  // 원칙: 한 페이지 안에서는 왼쪽 열을 위→아래로 먼저 채우고, 이후 오른쪽 열을 위→아래로 채운다.
+  // 기존 v19의 높이 측정 방식은 긴 문항이 열 높이를 초과할 때 문항이 DOM에서 제거되는 문제가 있었다.
+  // 따라서 먼저 총 문항 수 기준으로 페이지별 목표 문항 수를 정하고, 모든 문항을 반드시 append한다.
+  function getPageTarget(total){
+    if(total<=8) return total;        // 8문항 이하는 1페이지 우선
+    if(total<=12) return Math.ceil(total/2); // 12문항은 6+6 균형
+    if(total<=20) return 7;           // 20문항은 7문항 안팎으로 분산
+    return 8;                         // 30문항은 8문항 안팎으로 분산
+  }
+  const targetPerPage=getPageTarget(questions.length);
+  for(let start=0; start<questions.length; start+=targetPerPage){
+    const chunk=questions.slice(start,start+targetPerPage);
+    const pg=createPage();
+    const leftCount=Math.ceil(chunk.length/2);
+    chunk.forEach((q,idx)=>{
+      const el=makeQuestionEl(q);
+      (idx<leftCount?pg.left:pg.right).appendChild(el);
+    });
+  }
 
-  questions.forEach((q)=>{
-    let el=makeQuestionEl(q);
-    // 1순위: 같은 열에서 위→아래로 채운다. 넘치면 오른쪽 열, 오른쪽도 넘치면 다음 페이지 왼쪽으로 이동.
-    if(!tryAppend(pg.current,el)){
-      if(pg.current===pg.left){
-        pg.current=pg.right;
-        if(!tryAppend(pg.current,el)){
-          pg=createPage();
-          pg.current=pg.left;
-          tryAppend(pg.current,el);
-        }
-      }else{
-        pg=createPage();
-        pg.current=pg.left;
-        tryAppend(pg.current,el);
-      }
-    }
-  });
+  // 렌더링 후 문항 누락 검증
+  const renderedNums=[...col.querySelectorAll('.q-num')].map(el=>parseInt(el.textContent,10)).filter(Boolean);
+  const expectedNums=questions.map(q=>q.number);
+  const missing=expectedNums.filter(n=>!renderedNums.includes(n));
+  if(missing.length){
+    showErr('레이아웃 오류: '+missing.join(', ')+'번 문항이 렌더링되지 않았습니다. 다시 생성해 주세요.');
+  }
 
   document.getElementById('toolbar').className='toolbar on';
   document.getElementById('tb-meta').textContent=`총 ${questions.length}문항 · ${sd.short} ${state.grade}학년`;
