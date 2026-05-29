@@ -86,7 +86,7 @@ export default async function handler(req, res) {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: process.env.ANTHROPIC_FAST_MODEL || process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-latest',
+          model: process.env.ANTHROPIC_FAST_MODEL || process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5',
           max_tokens: Number(process.env.ANTHROPIC_MAX_TOKENS || 2200),
           temperature: 0.22,
           messages: [{ role: 'user', content: stablePrompt }]
@@ -102,6 +102,9 @@ export default async function handler(req, res) {
 
     if (!anthropicRes.ok) {
       const msg = data?.error?.message || data?.message || raw || `Claude API 오류 (${anthropicRes.status})`;
+      const friendlyMsg = String(msg).includes('claude-3-5-haiku')
+        ? '모델명이 잘못되었습니다. Vercel 환경변수 ANTHROPIC_FAST_MODEL을 claude-haiku-4-5 또는 claude-haiku-4-5-20251001로 변경해 주세요.'
+        : msg;
       return res.status(anthropicRes.status).json({ error: String(msg).slice(0, 1000), status: anthropicRes.status });
     }
 
