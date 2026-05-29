@@ -57,12 +57,13 @@ function getMigangBlueprint({ fullTotal, sectionIndex, startNo, count, subjectiv
 - 목표: more than a painting, reminded them of, important values that influenced behaviors and attitudes, study tool, harmony in family and society를 점검한다.
 - 유형 배분: 요지 1, 내용일치/불일치 1, remind A of B 의미 1, 주격 관계대명사 that/could 어법 1.
 - 금지: 앞 구간의 bamboo/lotus passage를 다시 쓰지 않는다.`;
-      return `[v24 30문항 Blueprint: ${s}~${e}번 · 종합 고난도]
-- 사용할 자료: Lesson 8 전체 중 앞 구간에서 직접 묻지 않은 표현만 사용한다.
-- 목표: 전체 내용 종합, 문장 삽입/순서, 요약문 완성, 어법 종합, 표현 바꿔쓰기.
-- 유형 배분: ${s}~${e}번 안에서 문장삽입/순서 1, 요약문/주제 1, 어법 종합 1, 표현 바꿔쓰기 또는 지칭어 1 이상.
+      return `[v25 30문항 Blueprint: ${s}~${e}번 · 종합 고난도]
+- 사용할 자료: Lesson 8 전체 중 앞 구간에서 직접 묻지 않은 표현과 문장 구조만 사용한다.
+- 목표: 전체 내용 종합, 문장 삽입/순서, 요약문 완성, 어법 종합, 대화 완성.
+- 유형 배분: ${s}~${e}번 안에서 문장삽입/순서 1, 요약문/주제 1, 어법 종합 1, 대화 완성 또는 지칭어 1 이상.
 - 금지: 1~24번의 passage를 그대로 복사해 같은 내용일치/제목 문제를 반복하지 않는다.
-- 새 지문을 만들지 말고, 저장 원문의 문장 일부를 짧게 재조합하거나 한두 문장만 제시한다.`;
+- 긴 passage는 최대 1개만 사용하고, 나머지는 짧은 문장형 또는 대화 완성형으로 낸다.
+- choices에 '보기 없음'을 넣지 않는다. 지문 안 ①~⑤ 후보형이면 choices는 []로 둔다.`;
     }
 
     if (total >= 12) {
@@ -154,7 +155,11 @@ function extractQuestions(text) {
 function normalizeQuestion(q, idx, startNumber) {
   const isObj = q?.format !== '서술형';
   const choices = Array.isArray(q?.choices) ? q.choices.map(c => String(c || '').trim()).filter(Boolean).slice(0, 5) : [];
-  while (isObj && choices.length < 5) choices.push('보기 없음');
+  const combinedText = String(q?.passage || '') + ' ' + String(q?.stem || '');
+  const hasInlineNumbers = (combinedText.match(/[①②③④⑤ⓐⓑⓒⓓⓔ]/g) || []).length >= 3;
+  if (isObj && choices.length < 5 && !hasInlineNumbers) {
+    while (choices.length < 5) choices.push(`선택지 보완 필요 ${choices.length + 1}`);
+  }
   let answer = q?.answer ?? (isObj ? 1 : '모범답안');
   if (isObj) {
     if (typeof answer === 'string') {
@@ -201,14 +206,14 @@ export default async function handler(req, res) {
 
     const stablePrompt = `${essentialPrompt}
 
-${blueprint}\n\n[이번 구간 생성 지시]\n전체 ${Number(fullTotal) || requestedTotal}문항 중 ${sectionIndex}/${sectionTotal}구간입니다.\n이번 구간 역할: ${sectionLabel}\n문항 번호: ${startNo}번부터 ${startNo + requestedTotal - 1}번까지\n정확히 ${requestedTotal}문항만 생성하세요. 객관식 ${requestedObjective}문항, 서술형 ${requestedSubjective}문항입니다.\n\n[품질 규칙]\n- passage는 구간당 최대 2개까지 허용합니다. 단, 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.\n- passage는 65~95단어, 대화문은 7~10줄 이내로 짧게 쓰세요.\n- 선택지는 객관식마다 정확히 5개, 각 선택지는 16단어 이내입니다.
+${blueprint}\n\n[이번 구간 생성 지시]\n전체 ${Number(fullTotal) || requestedTotal}문항 중 ${sectionIndex}/${sectionTotal}구간입니다.\n이번 구간 역할: ${sectionLabel}\n문항 번호: ${startNo}번부터 ${startNo + requestedTotal - 1}번까지\n정확히 ${requestedTotal}문항만 생성하세요. 객관식 ${requestedObjective}문항, 서술형 ${requestedSubjective}문항입니다.\n\n[품질 규칙]\n- passage는 구간당 최대 2개까지 허용합니다. 단, 같은 지문 연계 후속 문항은 passage를 빈 문자열로 두세요.\n- passage는 65~95단어, 대화문은 7~10줄 이내로 짧게 쓰세요.\n- 일반 객관식 선택지는 정확히 5개, 각 선택지는 16단어 이내입니다. choices에 '보기 없음'을 절대 넣지 마세요. 지문 안 ①~⑤ 후보를 직접 표시한 어법 문항만 choices를 빈 배열로 둘 수 있습니다.
 - 저장 교과서 자료가 제공된 경우, 반드시 그 원문/대화문을 기반으로 출제하세요. 저장 원문에 없는 Big data, Kimchi, Tea Ceremony, Plastic, Social Media 등 새 소재는 외부지문 비율이 있을 때만 허용합니다.
 - camouflage, plastic pollution, social media처럼 미강중3 프로필과 무관한 일반 독해 소재는 사용하지 마세요. 단, 사용자가 외부 지문으로 직접 입력한 경우는 예외입니다.
 - 선택지에는 그럴듯한 함정 2개 이상을 포함하세요.
 - 같은 구간 안에서 같은 발문 유형을 2회 이상 반복하지 마세요.
 - 내용일치/불일치만 반복하지 말고 blueprint의 유형 배분을 우선하세요.
 - 30문항 생성 시 앞 구간에서 이미 사용한 원문 소재를 뒤 구간에서 같은 방식으로 반복하지 마세요.
-- 어법 후보형은 지문 안 ①~⑤ 표시 방식 또는 선택지 방식 중 하나만 사용하세요. 둘을 중복하지 마세요.
+- 어법 후보형은 지문 안 ①~⑤ 표시 방식 또는 선택지 방식 중 하나만 사용하세요. 둘을 중복하지 마세요. 지문 안 ①~⑤ 방식이면 choices는 []로 둡니다.
 - explanation은 1문장만 쓰세요.\n- 서술형 0문항이면 서술형을 절대 만들지 마세요.\n\n[출력 형식]\n반드시 순수 JSON 배열만 출력하세요. 코드블록, 설명, 한국어 머리말을 절대 붙이지 마세요.\n각 객체 필드: number,type,subtype,format,difficulty,passage,stem,choices,answer,explanation,points\n객관식 answer는 1~5 숫자입니다.\n예시: [{"number":${startNo},"type":"내용일치","subtype":"불일치","format":"객관식","difficulty":"보통","passage":"...","stem":"위 글의 내용과 일치하지 않는 것은?","choices":["...","...","...","...","..."],"answer":1,"explanation":"...","points":4}]`;
 
     const controller = new AbortController();
