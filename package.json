@@ -1,9 +1,6 @@
 {
-  "name": "yussam-exam-generator-json-profile",
+  "name": "yussam-exam-generator-v8",
   "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vercel dev"
-  },
   "dependencies": {}
 }
