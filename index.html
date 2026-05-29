@@ -95,6 +95,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .ratio-label .ratio-sub{font-size:0.6rem;color:var(--muted);}
 .ratio-slider{flex:1;accent-color:var(--navy);height:3px;}
 .ratio-val{font-family:var(--font-mono);font-size:0.74rem;min-width:34px;text-align:right;color:var(--navy);font-weight:500;}
+.ratio-num{width:48px;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-family:var(--font-mono);font-size:0.72rem;text-align:center;}
+.ratio-slider:disabled{opacity:0.45;cursor:not-allowed;}
+.ratio-auto-note{font-size:0.6rem;color:var(--muted);margin-top:1px;}
 .ratio-total{font-family:var(--font-mono);font-size:0.64rem;text-align:right;margin-top:4px;}
 .ratio-total.ok{color:var(--green);}
 .ratio-total.ng{color:var(--accent);}
@@ -213,29 +216,28 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
 .sh-badge-wrap{padding:6px 22px 0;}
 .sh-badge{display:inline-flex;align-items:center;background:var(--navy);color:white;font-size:7.5pt;font-family:var(--font-mono);padding:2px 9px;border-radius:10px;}
 
-/* ── 2단 CSS columns 레이아웃 ──
-   좌 컬럼 위→아래 채운 뒤 우 컬럼으로 자동 이동
-   각 문제에 break-inside:avoid 로 문제 잘림 방지
+/* ── 2단 row-major grid 레이아웃 ──
+   CSS columns는 페이지 경계에서 3~4번이 뒤 페이지로 밀리고 5~7번이 앞 페이지 오른쪽에 먼저 보이는 문제가 있었다.
+   grid는 DOM 순서대로 1좌/2우, 3좌/4우... 배치하여 번호 흐름을 우선 보장한다.
    ─────────────────────────── */
 .q-columns{
-  column-count:2;
+  display:grid;
+  grid-template-columns:1fr 1fr;
   column-gap:0;
-  column-rule:1px solid #dde3f0;
+  row-gap:0;
   padding:6px 0 14px;
 }
 
-/* 개별 문제 - 컬럼/페이지 경계에서 잘리지 않음 */
+/* 개별 문제 - 페이지 경계에서 잘리지 않음 */
 .q-wrap{
   break-inside:avoid;
-  -webkit-column-break-inside:avoid;
   page-break-inside:avoid;
-  padding:10px 18px;
+  padding:9px 17px;
   border-bottom:1px solid #eef0f5;
-  /* display:inline-block은 컬럼 break-inside 동작에 필요 */
-  display:inline-block;
   width:100%;
   vertical-align:top;
 }
+.q-wrap:nth-child(even){border-left:1px solid #dde3f0;}
 .q-wrap.q-subj{background:#fffdf8;border-left:3px solid var(--accent);}
 
 /* 문제 행: [번호원] [발문] [위첨자 유형·배점] */
@@ -316,6 +318,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   .layout{display:block;}
   .content{padding:0;}
   #exam-sheet{display:block!important;border:none;border-radius:0;box-shadow:none;}
+  .q-columns{display:grid!important;grid-template-columns:1fr 1fr!important;}
   .q-wrap{break-inside:avoid;page-break-inside:avoid;}
 }
 </style>
@@ -388,9 +391,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-siz
   </div>
   <div class="sb-sec">
     <div class="sb-title">출제 비율 설정</div>
-    <div style="font-size:0.68rem;color:var(--muted);margin-bottom:8px;">교재별·외부지문 출제 비율 (합계 100%)</div>
+    <div style="font-size:0.68rem;color:var(--muted);margin-bottom:8px;">기본값: 주교재 100% / 외부지문 비율 입력 시 주교재 자동 조절</div>
     <div id="ratio-rows"></div>
-    <div class="ratio-total ng" id="ratio-total">합계: 0%</div>
+    <div class="ratio-total ng" id="ratio-total">합계: 0%</div><div class="ratio-auto-note">기본은 주교재 100%입니다. 외부지문 비율을 올리면 주교재 비율이 자동으로 줄어듭니다.</div>
   </div>
   <div class="sb-sec">
     <div class="sb-title">시험 종류 / 추가 요청</div>
@@ -778,38 +781,63 @@ function renderTbPanel(){
 }
 
 // ── 출제 비율 ─────────────────────────────────────
+function getPrimaryBookKey(){
+  const sd=SCHOOLS[state.school];
+  const books=sd.grades[state.grade]||[];
+  const mainIdx=books.findIndex(b=>b.type==='main');
+  return `book_${mainIdx>=0?mainIdx:0}`;
+}
 function renderRatioRows(){
   const sd=SCHOOLS[state.school];
   const books=sd.grades[state.grade]||[];
   const container=document.getElementById('ratio-rows');
   container.innerHTML='';ratioValues={};
-  const items=[
-    ...books.map((b,i)=>({key:`book_${i}`,label:b.name,sub:b.type==='main'?'주교재':'부교재'})),
-    {key:'external',label:'외부 지문',sub:''}
-  ];
-  items.forEach(item=>{
-    ratioValues[item.key]=0;
+  const primaryKey=getPrimaryBookKey();
+  books.forEach((b,i)=>{
+    const key=`book_${i}`;
+    ratioValues[key]=(key===primaryKey)?100:0;
     const row=document.createElement('div');row.className='ratio-row';
+    const isPrimary=key===primaryKey;
     row.innerHTML=`
-      <div class="ratio-label">${item.label}${item.sub?`<div class="ratio-sub">${item.sub}</div>`:''}
+      <div class="ratio-label">${b.name}<div class="ratio-sub">${isPrimary?'주교재 · 외부지문 비율에 따라 자동 조절':'부교재 · 기본 0%'}</div>
       </div>
-      <input class="ratio-slider" type="range" min="0" max="100" value="0"
-        oninput="updateRatio('${item.key}',this.value)">
-      <span class="ratio-val" id="rv_${item.key}">0%</span>`;
+      <input class="ratio-slider" id="rs_${key}" type="range" min="0" max="100" value="${ratioValues[key]}" disabled>
+      <span class="ratio-val" id="rv_${key}">${ratioValues[key]}%</span>`;
     container.appendChild(row);
   });
+  ratioValues.external=0;
+  const row=document.createElement('div');row.className='ratio-row';
+  row.innerHTML=`
+    <div class="ratio-label">외부 지문<div class="ratio-sub">직접 설정 · 주교재 자동 차감</div></div>
+    <input class="ratio-slider" id="rs_external" type="range" min="0" max="100" value="0" oninput="updateExternalRatio(this.value)">
+    <input class="ratio-num" id="rn_external" type="number" min="0" max="100" value="0" oninput="updateExternalRatio(this.value)">
+    <span class="ratio-val" id="rv_external">0%</span>`;
+  container.appendChild(row);
+  updateRatioTotal();
+}
+function setRatioUi(key,val){
+  const v=Math.max(0,Math.min(100,parseInt(val)||0));
+  ratioValues[key]=v;
+  const rv=document.getElementById('rv_'+key); if(rv)rv.textContent=v+'%';
+  const rs=document.getElementById('rs_'+key); if(rs)rs.value=v;
+  const rn=document.getElementById('rn_'+key); if(rn)rn.value=v;
+}
+function updateExternalRatio(val){
+  const external=Math.max(0,Math.min(100,parseInt(val)||0));
+  const primaryKey=getPrimaryBookKey();
+  Object.keys(ratioValues).forEach(k=>{if(k!=='external')setRatioUi(k,0);});
+  setRatioUi('external',external);
+  setRatioUi(primaryKey,100-external);
   updateRatioTotal();
 }
 function updateRatio(key,val){
-  ratioValues[key]=parseInt(val)||0;
-  const el=document.getElementById('rv_'+key);
-  if(el)el.textContent=ratioValues[key]+'%';
-  updateRatioTotal();
+  // 하위 호환용: 기존 oninput 호출이 남아 있을 경우 외부지문만 직접 조정합니다.
+  if(key==='external')updateExternalRatio(val);
 }
 function updateRatioTotal(){
   const t=Object.values(ratioValues).reduce((a,b)=>a+b,0);
   const el=document.getElementById('ratio-total');
-  el.textContent='합계: '+t+'%';
+  el.textContent=`합계: ${t}% · 주교재 ${ratioValues[getPrimaryBookKey()]||0}% / 외부지문 ${ratioValues.external||0}%`;
   el.className='ratio-total '+(t===100?'ok':'ng');
 }
 
@@ -941,11 +969,11 @@ function getMigang3V7Guide(){
     return `
 [미강중3 2025년 2학기 기말 기출 기반 핵심 출제 규칙]
 - 전체 방향: 형식보다 지문 근거 독해, 문맥 어휘, 지문 속 문법 판단을 우선한다.
-- 8문항 축소 테스트 구성 고정: 1~2번 Munjado 문화 설명문, 3~4번 Big data 정보문, 5~6번 발표 조언 대화문, 7번 연결어/문맥어휘, 8번 as 용법 또는 어법 변별.
+- 8문항 축소 테스트 구성 고정: 1~2번 Munjado 문화 설명문, 3~4번 Big data 정보문, 5~6번 발표 조언 대화문, 7번 연결어/문맥어휘, 8번 as 용법 또는 어법 변별. 반드시 이 번호 순서를 지키고, 3~4번 Big data 문항을 5번 이후로 보내지 않는다.
 - 내용일치/불일치: 정답 1개, 지문 표현을 거의 그대로 쓰되 대상·범위·목적·결과 중 하나만 바꾼 함정 2개, 소재는 맞지만 핵심 메시지가 빗나간 함정 1개, 명백한 오답 1개.
 - 제목/요지: 정답만 자연스럽고 나머지가 엉뚱한 구조 금지. 너무 넓은 제목, 너무 좁은 제목, 소재는 맞지만 결론이 다른 제목을 반드시 섞는다.
 - 어법: 독립 문법 예문을 만들지 말고, 앞 지문의 핵심 문장을 가져와 한두 표현만 변형한다. 품사·수일치·시제·수동태·준동사·접속사/전치사·as 용법 중 하나가 정답 근거가 되게 한다.
-- 대화문: 단순 내용일치 외에 Q&A 짝짓기, 마지막 조언, 화자의 다음 행동, 흐름상 어색한 문장을 섞는다.
+- 대화문: A/B 표기보다 Sora/Jake, Jisoo/Minho 같은 인물명을 사용한다. 단순 내용일치 외에 Q&A 짝짓기, 마지막 조언, 화자의 다음 행동, 흐름상 어색한 문장을 섞는다.
 - 지면 제한: 2쪽 안에 들어오도록 설명문은 65~95단어, 대화문은 7~10줄 이내, 선택지는 각 16단어 이내로 짧게 쓴다. camouflage/plastic/social media 같은 일반 독해 소재로 이탈하지 않는다.
 - 같은 지문 연계 문항은 첫 문항에만 passage를 넣고 후속 문항 passage는 빈 문자열로 둔다.
 - 서술형 0문항이면 서술형과 빈 답란을 절대 생성하지 않는다.`;
@@ -1031,7 +1059,7 @@ ${custom?'- 추가 요청: '+custom:''}${passageNote}
 // ── API 호출 ──────────────────────────────────────
 function buildGenerationSections(total, sub){
   const maxPerCall=4; // 안정성을 위한 1회 생성 상한: 30문항은 여러 구간으로 분할
-  const sectionLabels=['문화설명문·정보문','대화문·어법','문화설명문·내용일치/제목','정보문·빈칸/어법','대화문·Q&A','어법·어휘 변별','고난도 종합'];
+  const sectionLabels=['1~4번: Munjado 2문항 + Big data 2문항','5~8번: 발표 조언 대화문 2문항 + 연결어/as 2문항','문화설명문·내용일치/제목','정보문·빈칸/어법','대화문·Q&A','어법·어휘 변별','고난도 종합'];
   const sections=[];
   let remaining=total;
   let start=1;
