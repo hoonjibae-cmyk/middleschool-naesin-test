@@ -24,7 +24,7 @@
 ## 권장 환경변수
 
 - `ANTHROPIC_API_KEY`: 필수
-- `ANTHROPIC_FAST_MODEL`: 권장, 예: `claude-3-5-haiku-latest`
+- `ANTHROPIC_FAST_MODEL`: 권장, 예: `claude-haiku-4-5`
 - `ANTHROPIC_MAX_TOKENS`: 권장, 예: `1900`
 
 ## 사용상 주의
@@ -37,3 +37,9 @@
 - Claude tool_use 의존을 제거하고 JSON 배열 직접 출력 방식으로 변경했습니다.
 - 서버가 JSON 배열과 {questions:[...]} 형식을 모두 파싱합니다.
 - 1~6번 구간에서 구조화 문항을 반환하지 않는 오류를 줄였습니다.
+
+
+## v12 모델명 수정
+
+- `claude-3-5-haiku-latest`는 현재 Claude API에서 사용할 수 없는 모델명일 수 있어 기본값을 `claude-haiku-4-5`로 변경했습니다.
+- Vercel 환경변수에 기존 `ANTHROPIC_FAST_MODEL=claude-3-5-haiku-latest`가 남아 있으면 코드 기본값보다 환경변수가 우선되므로 반드시 삭제하거나 `claude-haiku-4-5`로 바꿔야 합니다.
